@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一家知煮 - 升級版菜單 (Firebase 即時連線版)</title>
+    <style>
+        :root {
+            --primary-color: #00B900;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 90px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #fff;
+            min-height: 100vh;
+        }
+        .section-header {
+            padding: 15px 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .set-selector {
+            padding: 15px 20px;
+            background: #fff;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+        }
+        
+        .card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        
+        .card-img {
+            width: 100%;
+            height: 120px;
+            background-color: #ffe8d6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #d4a373;
+            font-size: 14px;
+            object-fit: cover;
+        }
+        
+        .card-title {
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+        
+        .add-btn {
+            width: 36px;
+            height: 36px;
+            margin: 5px auto 15px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 50%;
+            font-size: 22px;
+            font-weight: normal;
+            transition: 0.2s;
+        }
+        
+        .card.selected {
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 185, 0, 0.2);
+        }
+        .card.selected .add-btn {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .empty-msg {
+            grid-column: span 2;
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 500px;
+            background: #fff;
+            padding: 15px 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .submit-btn {
+            background: #ccc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            transition: 0.3s;
+            cursor: not-allowed;
+        }
+        
+        .submit-btn.ready {
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        /* Loading Status */
+        .sync-status { text-align: center; font-size: 12px; color: #888; padding-top: 10px; }
+    </style>
+    
+    <!-- 引入 Firebase SDK (必須放在自訂 JS 前面) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="sync-status" id="sync-text">連線至伺服器中...</div>
+    
+    <div class="set-selector">
+        <label style="font-weight:bold; display:block; margin-bottom:8px;">選擇套餐：</label>
+        <select id="set-select" onchange="changeSetUI()">
+            <!-- 動態讀取後台套餐 -->
+        </select>
+    </div>
+
+    <!-- 主菜區塊 -->
+    <div class="section-header">主菜 <small id="main-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
+    <div class="grid-container" id="main-grid">
+        <!-- 動態生成 -->
+    </div>
+
+    <!-- 配菜區塊 -->
+    <div class="section-header">配菜 <small id="side-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
+    <div class="grid-container" id="side-grid">
+        <!-- 動態生成 -->
+    </div>
+
+    <!-- 底部按鈕 -->
+    <div class="footer">
+        <button id="submit-order-btn" class="submit-btn" onclick="submitOrder()">請選擇菜單</button>
+    </div>
+</div>
+
+<script>
+    // 1. 初始化 Firebase (貼上您的專屬金鑰)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
+      authDomain: "foodplatform-bf5c4.firebaseapp.com",
+      databaseURL: "https://foodplatform-bf5c4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "foodplatform-bf5c4",
+      storageBucket: "foodplatform-bf5c4.firebasestorage.app",
+      messagingSenderId: "1074266828425",
+      appId: "1:1074266828425:web:76167db17c03b56961e058",
+      measurementId: "G-0JD55K4YN2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 2. 全域變數
+    let globalSets = [];
+    let globalDishes = [];
+    let globalSchedule = {};
+    
+    let selectedMains = [];
+    let selectedSides = [];
+    let currentRules = { maxMains: 1, maxSides: 1 };
+    
+    // 記錄目前使用者正在觀看的套餐 ID (避免重新連線時跳回第一個套餐)
+    let currentViewingSetId = null; 
+
+    // 3. 監聽 Firebase 資料庫變化 (只要後台有儲存，這裡瞬間觸發)
+    db.ref('/').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        globalSets = data.menuSets || [];
+        globalDishes = data.menuDishes || [];
+        globalSchedule = data.menuSchedule || {};
+        
+        document.getElementById('sync-text').innerText = "✅ 菜單已是最新狀態";
+        document.getElementById('sync-text').style.color = "#00B900";
+        
+        // 重新繪製畫面
+        initAppUI();
+    });
+
+    function initAppUI() {
+        const setSelect = document.getElementById('set-select');
+        
+        // 記住使用者目前選到哪個套餐 (如果是剛打開，就用預設值)
+        if (!currentViewingSetId) {
+            currentViewingSetId = setSelect.value;
+        }
+
+        setSelect.innerHTML = '';
+        if (globalSets.length === 0) {
+            setSelect.innerHTML = '<option value="">目前無任何套餐供應</option>';
+        } else {
+            globalSets.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                setSelect.appendChild(opt);
+            });
+            // 嘗試恢復使用者剛才選擇的套餐
+            if (currentViewingSetId && globalSets.find(s => s.id === currentViewingSetId)) {
+                setSelect.value = currentViewingSetId;
+            } else {
+                setSelect.value = globalSets[0].id;
+                currentViewingSetId = globalSets[0].id;
+            }
+        }
+        
+        changeSetUI();
+    }
+
+    function changeSetUI() {
+        const setId = document.getElementById('set-select').value;
+        currentViewingSetId = setId; // 更新記錄
+        
+        const today = new Date().getDay(); 
+
+        const currentSet = globalSets.find(s => s.id === setId) || { maxMains: 1, maxSides: 1 };
+        currentRules.maxMains = parseInt(currentSet.maxMains) || 1;
+        currentRules.maxSides = parseInt(currentSet.maxSides) || 1;
+
+        document.getElementById('main-subtitle').innerText = `請選擇 ${currentRules.maxMains} 項`;
+        document.getElementById('side-subtitle').innerText = `請選擇 ${currentRules.maxSides} 項`;
+
+        const todaysMains = globalSchedule[today]?.mains || [];
+        const todaysSides = globalSchedule[today]?.sides || [];
+
+        const filteredMains = todaysMains.filter(id => {
+            const d = globalDishes.find(dish => dish.id === id);
+            return d && d.sets && d.sets.includes(setId);
+        });
+
+        const filteredSides = todaysSides.filter(id => {
+            const d = globalDishes.find(dish => dish.id === id);
+            return d && d.sets && d.sets.includes(setId);
+        });
+
+        renderCategory('main-grid', filteredMains, globalDishes, 'main');
+        renderCategory('side-grid', filteredSides, globalDishes, 'side');
+
+        // 因為菜單刷新，清空使用者的選擇以避免出錯
+        selectedMains = [];
+        selectedSides = [];
+        checkButtonState();
+    }
+
+    function renderCategory(containerId, itemIds, allDishes, categoryType) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (itemIds.length === 0) {
+            container.innerHTML = `<div class="empty-msg">此套餐今日尚未安排${categoryType === 'main' ? '主菜' : '配菜'}</div>`;
+            return;
+        }
+
+        itemIds.forEach(id => {
+            const dish = allDishes.find(d => d.id === id);
+            if (!dish) return;
+
+            const imgBg = categoryType === 'side' ? 'style="background-color:#d8f3dc; color:#40916c;"' : '';
+            
+            let imgContent = `<div class="card-img" ${imgBg}>${dish.name}</div>`;
+            if (dish.image) {
+                imgContent = `<img src="${dish.image}" style="width:100%; height:120px; object-fit:cover;">`;
+            }
+
+            const cardHTML = `
+                <div class="card ${categoryType}-item" id="${dish.id}" onclick="selectItem('${categoryType}', '${dish.id}')">
+                    ${imgContent}
+                    <div class="card-title">${dish.name}</div>
+                    <div class="add-btn">+</div>
+                </div>
+            `;
+            container.innerHTML += cardHTML;
+        });
+    }
+
+    function selectItem(category, clickedId) {
+        const maxLimit = category === 'main' ? currentRules.maxMains : currentRules.maxSides;
+        let selectedArr = category === 'main' ? selectedMains : selectedSides;
+        const card = document.getElementById(clickedId);
+        
+        const index = selectedArr.indexOf(clickedId);
+        
+        if (index > -1) {
+            selectedArr.splice(index, 1);
+            card.classList.remove('selected');
+            card.querySelector('.add-btn').innerText = '+';
+        } else {
+            if (selectedArr.length >= maxLimit) {
+                alert(`此套餐的${category === 'main' ? '主菜' : '配菜'}只能選擇 ${maxLimit} 項喔！`);
+                return;
+            }
+            selectedArr.push(clickedId);
+            card.classList.add('selected');
+            card.querySelector('.add-btn').innerText = '✓';
+        }
+
+        checkButtonState();
+    }
+
+    function checkButtonState() {
+        const btn = document.getElementById('submit-order-btn');
+        if (selectedMains.length === currentRules.maxMains && selectedSides.length === currentRules.maxSides) {
+            btn.innerText = '確認菜單';
+            btn.classList.add('ready');
+        } else {
+            btn.innerText = '請選擇菜單';
+            btn.classList.remove('ready');
+        }
+    }
+
+    function submitOrder() {
+        if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) {
+            alert(`請確認已選滿 ${currentRules.maxMains} 項主菜與 ${currentRules.maxSides} 項配菜！`);
+            return;
+        }
+        
+        alert('已確認菜單！準備導向確認訂單頁面。');
+    }
+</script>
+</body>
+</html>
