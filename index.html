@@ -25,7 +25,6 @@
             box-sizing: border-box;
         }
         
-        /* 頁面切換控制 */
         .view-section { display: none; }
         .view-section.active { display: block; }
 
@@ -126,19 +125,34 @@
             font-size: 14px;
         }
 
-        /* 確認畫面樣式 */
+        /* 💡 確認畫面明細卡片與縮圖樣式 */
         .confirm-box {
             padding: 20px;
         }
         .confirm-item-card {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 15px;
             margin-bottom: 15px;
         }
-        .confirm-item-card h4 { margin: 0 0 10px 0; color: var(--primary-color); }
-        .confirm-item-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 15px; border-bottom: 1px dashed #ddd; }
+        .confirm-item-card h4 { margin: 0 0 12px 0; color: var(--primary-color); font-size: 16px; }
+        .confirm-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 15px; }
+        .confirm-row:last-child { border-bottom: none; }
+        
+        /* 確認畫面的縮圖設計 */
+        .confirm-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #eee;
+            margin-right: 10px;
+        }
+        .confirm-item-info {
+            display: flex;
+            align-items: center;
+        }
 
         /* 完成畫面樣式 */
         .success-box {
@@ -223,7 +237,7 @@
             訂單明細確認
         </div>
         <div class="confirm-box" id="confirm-details-content">
-            <!-- 動態填入所選項目 -->
+            <!-- 動態填入所選項目與縮圖 -->
         </div>
     </div>
 
@@ -244,7 +258,6 @@
 </div>
 
 <script>
-    // 1. 初始化 Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
       authDomain: "foodplatform-bf5c4.firebaseapp.com",
@@ -258,7 +271,6 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-    // 2. 全域變數
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
@@ -267,9 +279,8 @@
     let selectedSides = [];
     let currentRules = { maxMains: 1, maxSides: 1 };
     let currentViewingSetId = null; 
-    let currentStep = 'menu'; // 'menu' | 'confirm' | 'success'
+    let currentStep = 'menu';
 
-    // 3. 監聽 Firebase 資料庫變化
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
@@ -359,7 +370,6 @@
                 imgContent = `<img src="${dish.image}" style="width:100%; height:120px; object-fit:cover;">`;
             }
 
-            // 檢查是否已被選取，若是則維持打勾狀態
             const isSelected = (categoryType === 'main' ? selectedMains : selectedSides).includes(dish.id);
 
             const cardHTML = `
@@ -408,7 +418,6 @@
         }
     }
 
-    // 💡 底部按鈕點擊總分派中心
     function handleFooterClick() {
         if (currentStep === 'menu') {
             if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) {
@@ -421,71 +430,88 @@
         }
     }
 
-    // 💡 切換至「菜單確認畫面」
+    // 💡 產生帶有縮圖的確認明細
     function goToConfirmView() {
         currentStep = 'confirm';
         
-        // 切換顯示畫面
         document.getElementById('view-menu').classList.remove('active');
         document.getElementById('view-confirm').classList.add('active');
-        document.querySelector('.set-selector').style.display = 'none'; // 隱藏上方套餐選單
+        document.querySelector('.set-selector').style.display = 'none';
 
-        // 取得所選的套餐名稱
         const setId = document.getElementById('set-select').value;
         const setObj = globalSets.find(s => s.id === setId);
         const setName = setObj ? setObj.name : '未知套餐';
 
-        // 組合主菜名稱清單
-        const mainNames = selectedMains.map(id => {
+        // 產生主菜清單 (含縮圖)
+        let mainHtmlRows = '';
+        selectedMains.forEach(id => {
             const d = globalDishes.find(item => item.id === id);
-            return d ? d.name : '';
-        }).join('、');
+            if (d) {
+                const thumb = d.image ? d.image : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="%23eee"/><text x="10" y="30" fill="%23aaa" font-size="10">無圖</text></svg>';
+                mainHtmlRows += `
+                    <div class="confirm-row">
+                        <div class="confirm-item-info">
+                            <img src="${thumb}" class="confirm-thumbnail">
+                            <span style="font-weight:bold; color:#333;">${d.name}</span>
+                        </div>
+                        <span style="color:#666; font-size:14px;">主菜</span>
+                    </div>
+                `;
+            }
+        });
 
-        // 組合配菜名稱清單
-        const sideNames = selectedSides.map(id => {
+        // 產生配菜清單 (含縮圖)
+        let sideHtmlRows = '';
+        selectedSides.forEach(id => {
             const d = globalDishes.find(item => item.id === id);
-            return d ? d.name : '';
-        }).join('、');
+            if (d) {
+                const thumb = d.image ? d.image : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="%23eee"/><text x="10" y="30" fill="%23aaa" font-size="10">無圖</text></svg>';
+                sideHtmlRows += `
+                    <div class="confirm-row">
+                        <div class="confirm-item-info">
+                            <img src="${thumb}" class="confirm-thumbnail">
+                            <span style="font-weight:bold; color:#333;">${d.name}</span>
+                        </div>
+                        <span style="color:#666; font-size:14px;">配菜</span>
+                    </div>
+                `;
+            }
+        });
 
-        // 渲染確認明細
         const contentBox = document.getElementById('confirm-details-content');
         contentBox.innerHTML = `
             <div class="confirm-item-card">
-                <h4>已選餐點明細</h4>
-                <div class="confirm-item-row">
-                    <span>套餐類型：</span>
-                    <strong style="color:#333;">${setName}</strong>
-                </div>
-                <div class="confirm-item-row">
-                    <span>所選主菜：</span>
-                    <strong style="color:#333;">${mainNames}</strong>
-                </div>
-                <div class="confirm-item-row">
-                    <span>所選配菜：</span>
-                    <strong style="color:#333;">${sideNames}</strong>
+                <h4>所選套餐類型</h4>
+                <div style="font-size: 16px; font-weight: bold; color: #333; padding: 5px 0;">
+                    📌 ${setName}
                 </div>
             </div>
-            <p style="text-align: center; color: #888; font-size: 14px; margin-top: 20px;">請確認以上內容無誤，點擊下方按鈕送出訂單。</p>
+
+            <div class="confirm-item-card">
+                <h4>主菜清單</h4>
+                ${mainHtmlRows}
+            </div>
+
+            <div class="confirm-item-card">
+                <h4>配菜清單</h4>
+                ${sideHtmlRows}
+            </div>
+
+            <p style="text-align: center; color: #888; font-size: 14px; margin-top: 15px;">請確認以上內容無誤，點擊下方按鈕送出訂單。</p>
         `;
 
-        // 更改底部按鈕為「確認訂餐」
         const btn = document.getElementById('submit-order-btn');
         btn.innerText = '確認訂餐';
         btn.classList.add('ready');
     }
 
-    // 💡 切換至「訂餐完成畫面」
     function goToSuccessView() {
         currentStep = 'success';
-        
         document.getElementById('view-confirm').classList.remove('active');
         document.getElementById('view-success').classList.add('active');
-        
-        // 隱藏底部固定按鈕列（完成頁面有自己的返回按鈕）
         document.getElementById('footer-bar').style.display = 'none';
     }
 
-    // 💡 重置流程返回首頁
     function resetOrder() {
         currentStep = 'menu';
         document.getElementById('view-success').classList.remove('active');
