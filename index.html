@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>一家知煮 - 升級版菜單 (Firebase 即時連線版)</title>
+    <title>一家知煮 - 線上點餐系統</title>
     <style>
         :root {
             --primary-color: #00B900;
@@ -22,7 +22,13 @@
             margin: 0 auto;
             background-color: #fff;
             min-height: 100vh;
+            box-sizing: border-box;
         }
+        
+        /* 頁面切換控制 */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
         .section-header {
             padding: 15px 20px;
             background-color: #fff;
@@ -120,6 +126,38 @@
             font-size: 14px;
         }
 
+        /* 確認畫面樣式 */
+        .confirm-box {
+            padding: 20px;
+        }
+        .confirm-item-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .confirm-item-card h4 { margin: 0 0 10px 0; color: var(--primary-color); }
+        .confirm-item-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 15px; border-bottom: 1px dashed #ddd; }
+
+        /* 完成畫面樣式 */
+        .success-box {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            margin: 0 auto 20px auto;
+        }
+
         .footer {
             position: fixed;
             bottom: 0;
@@ -134,6 +172,7 @@
             align-items: center;
             left: 50%;
             transform: translateX(-50%);
+            z-index: 100;
         }
         
         .submit-btn {
@@ -153,47 +192,59 @@
             background: var(--primary-color);
             cursor: pointer;
         }
-
-        /* Loading Status */
-        .sync-status { text-align: center; font-size: 12px; color: #888; padding-top: 10px; }
     </style>
     
-    <!-- 引入 Firebase SDK (必須放在自訂 JS 前面) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
 <div class="container">
-    <div class="sync-status" id="sync-text">連線至伺服器中...</div>
     
-    <div class="set-selector">
-        <label style="font-weight:bold; display:block; margin-bottom:8px;">選擇套餐：</label>
-        <select id="set-select" onchange="changeSetUI()">
-            <!-- 動態讀取後台套餐 -->
-        </select>
+    <!-- ================= 畫面一：點餐主頁 ================= -->
+    <div id="view-menu" class="view-section active">
+        <div class="set-selector">
+            <label style="font-weight:bold; display:block; margin-bottom:8px;">選擇套餐：</label>
+            <select id="set-select" onchange="changeSetUI()">
+                <!-- 動態讀取後台套餐 -->
+            </select>
+        </div>
+
+        <div class="section-header">主菜 <small id="main-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
+        <div class="grid-container" id="main-grid"></div>
+
+        <div class="section-header">配菜 <small id="side-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
+        <div class="grid-container" id="side-grid"></div>
     </div>
 
-    <!-- 主菜區塊 -->
-    <div class="section-header">主菜 <small id="main-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
-    <div class="grid-container" id="main-grid">
-        <!-- 動態生成 -->
+    <!-- ================= 畫面二：菜單確認畫面 ================= -->
+    <div id="view-confirm" class="view-section">
+        <div style="background-color: var(--primary-color); color: white; padding: 20px; text-align: center; font-size: 20px; font-weight: bold;">
+            訂單明細確認
+        </div>
+        <div class="confirm-box" id="confirm-details-content">
+            <!-- 動態填入所選項目 -->
+        </div>
     </div>
 
-    <!-- 配菜區塊 -->
-    <div class="section-header">配菜 <small id="side-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
-    <div class="grid-container" id="side-grid">
-        <!-- 動態生成 -->
+    <!-- ================= 畫面三：訂餐完成畫面 ================= -->
+    <div id="view-success" class="view-section">
+        <div class="success-box">
+            <div class="success-icon">✓</div>
+            <h2 style="color: #333; margin-bottom: 10px;">訂餐完成！</h2>
+            <p style="color: #666; margin-bottom: 30px;">您的餐點已成功送出，老闆正在為您準備中！</p>
+            <button class="btn btn-primary" style="background: var(--primary-color); padding: 12px 30px; font-size: 16px; border-radius: 8px; border:none; color:white; font-weight:bold;" onclick="resetOrder()">返回首頁繼續點餐</button>
+        </div>
     </div>
 
-    <!-- 底部按鈕 -->
-    <div class="footer">
-        <button id="submit-order-btn" class="submit-btn" onclick="submitOrder()">請選擇菜單</button>
+    <!-- ================= 底部固定按鈕列 ================= -->
+    <div class="footer" id="footer-bar">
+        <button id="submit-order-btn" class="submit-btn" onclick="handleFooterClick()">請選擇菜單</button>
     </div>
 </div>
 
 <script>
-    // 1. 初始化 Firebase (貼上您的專屬金鑰)
+    // 1. 初始化 Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
       authDomain: "foodplatform-bf5c4.firebaseapp.com",
@@ -204,7 +255,7 @@
       appId: "1:1074266828425:web:76167db17c03b56961e058",
       measurementId: "G-0JD55K4YN2"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
     // 2. 全域變數
@@ -215,28 +266,23 @@
     let selectedMains = [];
     let selectedSides = [];
     let currentRules = { maxMains: 1, maxSides: 1 };
-    
-    // 記錄目前使用者正在觀看的套餐 ID (避免重新連線時跳回第一個套餐)
     let currentViewingSetId = null; 
+    let currentStep = 'menu'; // 'menu' | 'confirm' | 'success'
 
-    // 3. 監聽 Firebase 資料庫變化 (只要後台有儲存，這裡瞬間觸發)
+    // 3. 監聽 Firebase 資料庫變化
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
         globalDishes = data.menuDishes || [];
         globalSchedule = data.menuSchedule || {};
         
-        document.getElementById('sync-text').innerText = "✅ 菜單已是最新狀態";
-        document.getElementById('sync-text').style.color = "#00B900";
-        
-        // 重新繪製畫面
-        initAppUI();
+        if (currentStep === 'menu') {
+            initAppUI();
+        }
     });
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
-        
-        // 記住使用者目前選到哪個套餐 (如果是剛打開，就用預設值)
         if (!currentViewingSetId) {
             currentViewingSetId = setSelect.value;
         }
@@ -251,7 +297,6 @@
                 opt.textContent = s.name;
                 setSelect.appendChild(opt);
             });
-            // 嘗試恢復使用者剛才選擇的套餐
             if (currentViewingSetId && globalSets.find(s => s.id === currentViewingSetId)) {
                 setSelect.value = currentViewingSetId;
             } else {
@@ -259,16 +304,14 @@
                 currentViewingSetId = globalSets[0].id;
             }
         }
-        
         changeSetUI();
     }
 
     function changeSetUI() {
         const setId = document.getElementById('set-select').value;
-        currentViewingSetId = setId; // 更新記錄
+        currentViewingSetId = setId;
         
         const today = new Date().getDay(); 
-
         const currentSet = globalSets.find(s => s.id === setId) || { maxMains: 1, maxSides: 1 };
         currentRules.maxMains = parseInt(currentSet.maxMains) || 1;
         currentRules.maxSides = parseInt(currentSet.maxSides) || 1;
@@ -292,7 +335,6 @@
         renderCategory('main-grid', filteredMains, globalDishes, 'main');
         renderCategory('side-grid', filteredSides, globalDishes, 'side');
 
-        // 因為菜單刷新，清空使用者的選擇以避免出錯
         selectedMains = [];
         selectedSides = [];
         checkButtonState();
@@ -312,17 +354,19 @@
             if (!dish) return;
 
             const imgBg = categoryType === 'side' ? 'style="background-color:#d8f3dc; color:#40916c;"' : '';
-            
             let imgContent = `<div class="card-img" ${imgBg}>${dish.name}</div>`;
             if (dish.image) {
                 imgContent = `<img src="${dish.image}" style="width:100%; height:120px; object-fit:cover;">`;
             }
 
+            // 檢查是否已被選取，若是則維持打勾狀態
+            const isSelected = (categoryType === 'main' ? selectedMains : selectedSides).includes(dish.id);
+
             const cardHTML = `
-                <div class="card ${categoryType}-item" id="${dish.id}" onclick="selectItem('${categoryType}', '${dish.id}')">
+                <div class="card ${categoryType}-item ${isSelected ? 'selected' : ''}" id="${dish.id}" onclick="selectItem('${categoryType}', '${dish.id}')">
                     ${imgContent}
                     <div class="card-title">${dish.name}</div>
-                    <div class="add-btn">+</div>
+                    <div class="add-btn">${isSelected ? '✓' : '+'}</div>
                 </div>
             `;
             container.innerHTML += cardHTML;
@@ -364,13 +408,94 @@
         }
     }
 
-    function submitOrder() {
-        if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) {
-            alert(`請確認已選滿 ${currentRules.maxMains} 項主菜與 ${currentRules.maxSides} 項配菜！`);
-            return;
+    // 💡 底部按鈕點擊總分派中心
+    function handleFooterClick() {
+        if (currentStep === 'menu') {
+            if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) {
+                alert(`請確認已選滿 ${currentRules.maxMains} 項主菜與 ${currentRules.maxSides} 項配菜！`);
+                return;
+            }
+            goToConfirmView();
+        } else if (currentStep === 'confirm') {
+            goToSuccessView();
         }
+    }
+
+    // 💡 切換至「菜單確認畫面」
+    function goToConfirmView() {
+        currentStep = 'confirm';
         
-        alert('已確認菜單！準備導向確認訂單頁面。');
+        // 切換顯示畫面
+        document.getElementById('view-menu').classList.remove('active');
+        document.getElementById('view-confirm').classList.add('active');
+        document.querySelector('.set-selector').style.display = 'none'; // 隱藏上方套餐選單
+
+        // 取得所選的套餐名稱
+        const setId = document.getElementById('set-select').value;
+        const setObj = globalSets.find(s => s.id === setId);
+        const setName = setObj ? setObj.name : '未知套餐';
+
+        // 組合主菜名稱清單
+        const mainNames = selectedMains.map(id => {
+            const d = globalDishes.find(item => item.id === id);
+            return d ? d.name : '';
+        }).join('、');
+
+        // 組合配菜名稱清單
+        const sideNames = selectedSides.map(id => {
+            const d = globalDishes.find(item => item.id === id);
+            return d ? d.name : '';
+        }).join('、');
+
+        // 渲染確認明細
+        const contentBox = document.getElementById('confirm-details-content');
+        contentBox.innerHTML = `
+            <div class="confirm-item-card">
+                <h4>已選餐點明細</h4>
+                <div class="confirm-item-row">
+                    <span>套餐類型：</span>
+                    <strong style="color:#333;">${setName}</strong>
+                </div>
+                <div class="confirm-item-row">
+                    <span>所選主菜：</span>
+                    <strong style="color:#333;">${mainNames}</strong>
+                </div>
+                <div class="confirm-item-row">
+                    <span>所選配菜：</span>
+                    <strong style="color:#333;">${sideNames}</strong>
+                </div>
+            </div>
+            <p style="text-align: center; color: #888; font-size: 14px; margin-top: 20px;">請確認以上內容無誤，點擊下方按鈕送出訂單。</p>
+        `;
+
+        // 更改底部按鈕為「確認訂餐」
+        const btn = document.getElementById('submit-order-btn');
+        btn.innerText = '確認訂餐';
+        btn.classList.add('ready');
+    }
+
+    // 💡 切換至「訂餐完成畫面」
+    function goToSuccessView() {
+        currentStep = 'success';
+        
+        document.getElementById('view-confirm').classList.remove('active');
+        document.getElementById('view-success').classList.add('active');
+        
+        // 隱藏底部固定按鈕列（完成頁面有自己的返回按鈕）
+        document.getElementById('footer-bar').style.display = 'none';
+    }
+
+    // 💡 重置流程返回首頁
+    function resetOrder() {
+        currentStep = 'menu';
+        document.getElementById('view-success').classList.remove('active');
+        document.getElementById('view-menu').classList.add('active');
+        document.querySelector('.set-selector').style.display = 'block';
+        document.getElementById('footer-bar').style.display = 'flex';
+
+        selectedMains = [];
+        selectedSides = [];
+        initAppUI();
     }
 </script>
 </body>
