@@ -446,6 +446,7 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
+    // 💡 1. 頁面載入瞬間：一口氣把所有本機快取（廣告、套餐、菜色、排程）瞬間讀出，實現 0 秒秒開！
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) { try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; } } else { globalAds = defaultAds; }
 
@@ -463,15 +464,18 @@
         startTimer();
         initSwipeGesture();
         
-        if (globalSets.length > 0) {
+        // 💡 關鍵：只要本地有任何快取資料，點進去瞬間 0 秒把套餐和菜色全部畫好！
+        if (globalSets.length > 0 || globalDishes.length > 0) {
             initAppUI();
         }
         
+        // 極速移除載入遮罩
         setTimeout(() => {
             hideLoadingMask();
-        }, 500);
+        }, 200);
     });
 
+    // 💡 2. 背景持續與 Firebase 保持即時同步並自動更新快取
     db.ref('menuSets').on('value', (snapshot) => {
         const val = snapshot.val();
         if (Array.isArray(val)) {
@@ -705,7 +709,7 @@
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
 
-        // 💡 修正防呆：如果今日排程完全空白（老闆還沒勾選），我們自動把所有屬於該套餐的菜色全部列出，避免畫面直接一片空白
+        // 防呆：如果今日排程完全空白，自動列出所有屬於該套餐的菜色
         let finalMains = todaysMains;
         let finalSides = todaysSides;
 

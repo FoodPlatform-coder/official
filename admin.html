@@ -347,6 +347,16 @@
     ];
     let currentUser = null;
 
+    // 💡 1. 優先從本機快取讀取（實現後台 0 秒秒開）
+    let cachedAdminSets = localStorage.getItem('localAdminSets');
+    if (cachedAdminSets) { try { globalSets = JSON.parse(cachedAdminSets); } catch(e) { globalSets = []; } }
+
+    let cachedAdminDishes = localStorage.getItem('localAdminDishes');
+    if (cachedAdminDishes) { try { globalDishes = JSON.parse(cachedAdminDishes); } catch(e) { globalDishes = []; } }
+
+    let cachedAdminSchedule = localStorage.getItem('localAdminSchedule');
+    if (cachedAdminSchedule) { try { globalSchedule = JSON.parse(cachedAdminSchedule); } catch(e) { globalSchedule = {}; } }
+
     document.addEventListener("DOMContentLoaded", () => {
         const savedUser = localStorage.getItem('localAdminUser');
         if (savedUser) {
@@ -355,6 +365,9 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
                 applyPermissions();
+                
+                // 💡 登入瞬間立刻用快取渲染，畫面 0 秒出現
+                renderData();
                 startLiveSync(); 
             } catch(e) {
                 localStorage.removeItem('localAdminUser');
@@ -395,6 +408,7 @@
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
                 
                 applyPermissions();
+                renderData(); // 登入瞬間渲染
                 startLiveSync(); 
             } else {
                 document.getElementById('login-error').innerText = "帳號或密碼錯誤，請重試！";
@@ -449,32 +463,50 @@
         else switchTab('admins', navAdmins);
     }
 
-    // 💡 獨立分開監聽子節點，完美對應前台
+    // 💡 2. 背景即時同步並更新本地快取
     function startLiveSync() {
         db.ref('menuSets').on('value', (snapshot) => {
-            globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-            if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
+            const val = snapshot.val();
+            if (Array.isArray(val)) {
+                globalSets = val;
+                localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
+                if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
+            }
         });
 
         db.ref('menuDishes').on('value', (snapshot) => {
-            globalDishes = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-            if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
-            if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+            const val = snapshot.val();
+            if (Array.isArray(val)) {
+                globalDishes = val;
+                localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
+                if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
+                if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+            }
         });
 
         db.ref('menuSchedule').on('value', (snapshot) => {
-            globalSchedule = snapshot.val() || {};
-            if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+            const val = snapshot.val();
+            if (val) {
+                globalSchedule = val;
+                localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
+                if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+            }
         });
 
         db.ref('menuAds').on('value', (snapshot) => {
-            globalAds = Array.isArray(snapshot.val()) ? snapshot.val() : globalAds;
-            if(document.getElementById('tab-ads').classList.contains('active')) renderAds();
+            const val = snapshot.val();
+            if (Array.isArray(val)) {
+                globalAds = val;
+                if(document.getElementById('tab-ads').classList.contains('active')) renderAds();
+            }
         });
 
         db.ref('admins').on('value', (snapshot) => {
-            globalAdmins = Array.isArray(snapshot.val()) ? snapshot.val() : globalAdmins;
-            if(document.getElementById('tab-admins').classList.contains('active')) renderAdmins();
+            const val = snapshot.val();
+            if (Array.isArray(val)) {
+                globalAdmins = val;
+                if(document.getElementById('tab-admins').classList.contains('active')) renderAdmins();
+            }
         });
     }
 
@@ -764,7 +796,8 @@
             globalSets.push({ id: 'set_' + Date.now(), name, maxMains: mains, maxSides: sides });
         }
         db.ref('menuSets').set(globalSets);
-        resetSetForm(); renderSetModalList();
+        localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
+        resetSetForm(); renderSetModalList(); renderData();
     }
     function deleteSet(id) {
         if(confirm('確定刪除此套餐？')) {
@@ -772,7 +805,9 @@
             globalDishes.forEach(d => { if(d.sets) d.sets = d.sets.filter(x => x !== id); });
             db.ref('menuSets').set(globalSets);
             db.ref('menuDishes').set(globalDishes);
-            renderSetModalList();
+            localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
+            localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
+            renderSetModalList(); renderData();
         }
     }
 
@@ -851,7 +886,9 @@
             globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets, image });
         }
         db.ref('menuDishes').set(globalDishes);
+        localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
         closeModal('modal-dish');
+        renderData();
     }
 
     function deleteDish(id) {
@@ -863,6 +900,9 @@
             }
             db.ref('menuDishes').set(globalDishes);
             db.ref('menuSchedule').set(globalSchedule);
+            localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
+            localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
+            renderData();
         }
     }
 
@@ -889,6 +929,7 @@
             sides: Array.from(document.querySelectorAll('.side-chk:checked')).map(el => el.value)
         };
         db.ref('menuSchedule').set(globalSchedule);
+        localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
         alert('排程儲存成功！');
     }
 
