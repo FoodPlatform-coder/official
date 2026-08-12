@@ -446,38 +446,61 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
+    // 💡 1. 頁面載入瞬間：優先讀取本機快取（廣告、套餐、菜色、排程），實現 0 秒秒開！
     let cachedAds = localStorage.getItem('localMenuAds');
-    if (cachedAds) {
-        try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; }
-    } else {
-        globalAds = defaultAds;
-    }
+    if (cachedAds) { try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; } } else { globalAds = defaultAds; }
+
+    let cachedSets = localStorage.getItem('localMenuSets');
+    if (cachedSets) { try { globalSets = JSON.parse(cachedSets); } catch(e) { globalSets = []; } }
+
+    let cachedDishes = localStorage.getItem('localMenuDishes');
+    if (cachedDishes) { try { globalDishes = JSON.parse(cachedDishes); } catch(e) { globalDishes = []; } }
+
+    let cachedSchedule = localStorage.getItem('localMenuSchedule');
+    if (cachedSchedule) { try { globalSchedule = JSON.parse(cachedSchedule); } catch(e) { globalSchedule = {}; } }
     
     document.addEventListener("DOMContentLoaded", () => {
         renderAdsCarousel();
         startTimer();
         initSwipeGesture();
         
-        // 💡 雙重保險防護：1.5秒內強制移除載入遮罩，絕對不卡死
+        // 如果有快取資料，直接在 0 秒內初始化介面
+        if (globalSets.length > 0) {
+            initAppUI();
+        }
+        
+        // 保險機制：最多 0.5 秒強制移除載入遮罩，絕對不卡畫面
         setTimeout(() => {
             hideLoadingMask();
-        }, 1500);
+        }, 500);
     });
 
-    // 💡 關鍵優化：分開獨立監聽子節點，完美對應後台寫入路徑
+    // 💡 2. 背景持續與 Firebase 保持即時同步並自動更新快取
     db.ref('menuSets').on('value', (snapshot) => {
-        globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-        if (currentStep === 'menu') initAppUI();
+        const val = snapshot.val();
+        if (Array.isArray(val)) {
+            globalSets = val;
+            localStorage.setItem('localMenuSets', JSON.stringify(globalSets));
+            if (currentStep === 'menu') initAppUI();
+        }
     });
 
     db.ref('menuDishes').on('value', (snapshot) => {
-        globalDishes = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-        if (currentStep === 'menu') changeSetUI();
+        const val = snapshot.val();
+        if (Array.isArray(val)) {
+            globalDishes = val;
+            localStorage.setItem('localMenuDishes', JSON.stringify(globalDishes));
+            if (currentStep === 'menu') changeSetUI();
+        }
     });
 
     db.ref('menuSchedule').on('value', (snapshot) => {
-        globalSchedule = snapshot.val() || {};
-        if (currentStep === 'menu') changeSetUI();
+        const val = snapshot.val();
+        if (val) {
+            globalSchedule = val;
+            localStorage.setItem('localMenuSchedule', JSON.stringify(globalSchedule));
+            if (currentStep === 'menu') changeSetUI();
+        }
     });
 
     db.ref('menuAds').on('value', (snapshot) => {
