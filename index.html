@@ -455,6 +455,7 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
+    // 💡 1. 頁面一載入：優先讀取本機暫存廣告，確保 0 延遲秒開
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) {
         try {
@@ -464,6 +465,53 @@
         }
     } else {
         globalAds = defaultAds;
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        renderAdsCarousel();
+        startTimer();
+        initSwipeGesture();
+        
+        // 💡 保險機制：頁面結構長好後，強制在 0.5 秒內把載入遮罩拿掉，絕對不允許卡死！
+        setTimeout(() => {
+            hideLoadingMask();
+        }, 500);
+    });
+
+    // 💡 2. 背景與 Firebase 保持即時同步
+    db.ref('/').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        globalSets = data.menuSets || [];
+        globalDishes = data.menuDishes || [];
+        globalSchedule = data.menuSchedule || {};
+        
+        if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
+            globalAds = data.menuAds;
+            localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
+        } else {
+            db.ref('menuAds').set(defaultAds);
+            globalAds = defaultAds;
+        }
+        
+        renderAdsCarousel();
+
+        if (currentStep === 'menu') {
+            initAppUI();
+        }
+
+        // 資料抓回來後，平滑關閉載入遮罩
+        hideLoadingMask();
+    });
+
+    // 獨立的關閉遮罩函式 (確保不會重複呼叫出錯)
+    function hideLoadingMask() {
+        const mask = document.getElementById('loading-mask');
+        if (mask && mask.style.display !== 'none') {
+            mask.style.opacity = '0';
+            setTimeout(() => {
+                mask.style.display = 'none';
+            }, 300);
+        }
     }
     
     document.addEventListener("DOMContentLoaded", () => {
