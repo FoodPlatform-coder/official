@@ -433,25 +433,42 @@
     let slideIndex = 0;
     let slideTimer = null;
 
-    db.ref('/').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        globalSets = data.menuSets || [];
-        globalDishes = data.menuDishes || [];
-        globalSchedule = data.menuSchedule || {};
-        globalAds = data.menuAds || [
+    // 💡 1. 頁面一打開的瞬間：立刻從瀏覽器快取讀取廣告並秒開彈窗 (0 延遲)
+    let cachedAds = localStorage.getItem('localMenuAds');
+    if (cachedAds) {
+        globalAds = JSON.parse(cachedAds);
+        renderAdsCarousel();
+    } else {
+        // 如果沒有快取，先用預設廣告頂替，確保彈窗瞬間跳出
+        globalAds = [
             { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
             { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
             { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
             { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
             { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
         ];
-        
         renderAdsCarousel();
+    }
 
+    // 💡 2. 背景持續與 Firebase 保持連線同步 (菜單、排程、與最新廣告)
+    db.ref('/').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        globalSets = data.menuSets || [];
+        globalDishes = data.menuDishes || [];
+        globalSchedule = data.menuSchedule || {};
+        
+        // 如果後台有設定廣告，更新變數、寫入本機快取，並在背景默默刷新輪播內容
+        if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
+            globalAds = data.menuAds;
+            localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
+            renderAdsCarousel();
+        }
+        
         if (currentStep === 'menu') {
             initAppUI();
         }
 
+        // 資料到齊，平滑淡出載入遮罩
         const mask = document.getElementById('loading-mask');
         if (mask) {
             mask.style.opacity = '0';
@@ -459,10 +476,12 @@
         }
     });
 
-    // 💡 動態產生廣告輪播 (支援純文字自動放大排版)
+    // 💡 動態產生廣告輪播 (維持您原本的精準排版)
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
+        if (!slidesContainer || !dotsContainer) return;
+        
         slidesContainer.innerHTML = '';
         dotsContainer.innerHTML = '';
 
@@ -481,8 +500,8 @@
             slidesContainer.innerHTML += `
                 <div class="carousel-slide ${isActive}">
                     ${mediaHtml}
-                    <div class="slide-title" ${!ad.media ? 'style="font-size:20px; margin-top:10px;"' : ''}>${ad.title || ''}</div>
-                    <div class="slide-desc" ${!ad.media ? 'style="font-size:15px; max-height:120px;"' : ''}>${ad.desc || ''}</div>
+                    <div class="slide-title" ${!ad.media ? 'style="font-size:20px; margin-top:20px;"' : ''}>${ad.title || ''}</div>
+                    <div class="slide-desc" ${!ad.media ? 'style="font-size:15px; max-height:140px;"' : ''}>${ad.desc || ''}</div>
                 </div>
             `;
 
