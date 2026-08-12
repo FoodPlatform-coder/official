@@ -416,7 +416,7 @@
 </div>
 
 <script>
-    const firebaseConfig = {
+   const firebaseConfig = {
       apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
       authDomain: "foodplatform-bf5c4.firebaseapp.com",
       databaseURL: "https://foodplatform-bf5c4-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -443,6 +443,10 @@
     let slideIndex = 0;
     let slideTimer = null;
 
+    // 觸控滑動專用變數
+    let touchStartX = 0;
+    let touchEndX = 0;
+
     const defaultAds = [
         { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
         { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
@@ -451,7 +455,6 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
-    // 💡 1. 頁面打開瞬間：優先讀取本機暫存或預設廣告，確保 0 延遲秒開彈窗
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) {
         try {
@@ -463,25 +466,22 @@
         globalAds = defaultAds;
     }
     
-    // 確保 DOM 載入後立刻渲染廣告
     document.addEventListener("DOMContentLoaded", () => {
         renderAdsCarousel();
         startTimer();
+        initSwipeGesture(); // 啟動滑動手勢監聽
     });
 
-    // 💡 2. 背景與 Firebase 保持即時同步
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
         globalDishes = data.menuDishes || [];
         globalSchedule = data.menuSchedule || {};
         
-        // 檢查雲端廣告，若有則同步更新並存入快取
         if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
             globalAds = data.menuAds;
             localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
         } else {
-            // 如果雲端完全沒有，順便幫雲端初始化寫入預設廣告
             db.ref('menuAds').set(defaultAds);
             globalAds = defaultAds;
         }
@@ -499,7 +499,6 @@
         }
     });
 
-    // 💡 穩定動態產生廣告輪播
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -557,6 +556,14 @@
         showSlides(slideIndex);
     }
 
+    function prevSlide() {
+        let slides = document.querySelectorAll('.carousel-slide');
+        if (slides.length === 0) return;
+        slideIndex--;
+        if (slideIndex < 0) slideIndex = slides.length - 1;
+        showSlides(slideIndex);
+    }
+
     function currentSlide(n) {
         slideIndex = n;
         showSlides(slideIndex);
@@ -573,12 +580,43 @@
         startTimer();
     }
 
+    // 💡 3. 初始化手機左右滑動手勢 (Swipe Gesture)
+    function initSwipeGesture() {
+        const sliderContainer = document.getElementById('carousel-slides');
+        if (!sliderContainer) return;
+
+        sliderContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        sliderContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+    }
+
+    function handleSwipe() {
+        const threshold = 50; // 滑動距離大於 50px 才會觸發切換
+        if (touchEndX < touchStartX - threshold) {
+            // 往左滑 ➔ 下一張
+            nextSlide();
+            resetTimer();
+        } else if (touchEndX > touchStartX + threshold) {
+            // 往右滑 ➔ 上一張
+            prevSlide();
+            resetTimer();
+        }
+    }
+
     function closeAdModal() {
         const modal = document.getElementById('ad-modal');
         if (modal) modal.style.display = 'none';
         clearInterval(slideTimer); 
     }
 
+    window.onload = function() {
+        startTimer();
+    };
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
@@ -822,6 +860,7 @@
         selectedMains = [];
         selectedSides = [];
         initAppUI();
+    
     }
 </script>
 </body>
