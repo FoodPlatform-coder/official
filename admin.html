@@ -57,8 +57,6 @@
         .img-upload-preview { width: 100%; height: 150px; background: #f0f0f0; border: 2px dashed #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; overflow: hidden; cursor: pointer; position: relative; }
         .img-upload-preview img, .img-upload-preview video { width: 100%; height: 100%; object-fit: cover; display: none; }
         .img-upload-preview span { color: #888; pointer-events: none; }
-
-        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: var(--primary); z-index: 500; display: none; }
     </style>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -97,8 +95,6 @@
 </div>
 
 <div class="content">
-    <div id="loading-overlay">正在同步雲端資料...</div>
-    
     <!-- 1. MENU 菜單管理 -->
     <div id="tab-dishes" class="tab-content card">
         <div class="top-controls">
@@ -155,7 +151,7 @@
         <div class="top-controls">
             <h3 style="margin:0;">廣告輪播管理 (共 5 個版位)</h3>
         </div>
-        <p style="color: #666; font-size: 14px;">您可以編輯前台開場彈出視窗中的 5 個輪播分頁，可設定標題、文宣內容以及上傳圖片或影片檔。</p>
+        <p style="color: #666; font-size: 14px;">您可以編輯前台開場彈出視窗中的 5 個輪播分頁，可設定標題、文宣內容以及上傳或移除圖片/影片檔。</p>
 
         <table>
             <thead>
@@ -193,8 +189,6 @@
 </div>
 
 <!-- ================= MODALS ================= -->
-
-<!-- 套餐管理 Modal -->
 <div class="modal" id="modal-sets">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal('modal-sets')">×</button>
@@ -228,7 +222,6 @@
     </div>
 </div>
 
-<!-- 菜色管理 Modal -->
 <div class="modal" id="modal-dish">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal('modal-dish')">×</button>
@@ -264,7 +257,6 @@
     </div>
 </div>
 
-<!-- 廣告編輯 Modal -->
 <div class="modal" id="modal-ad">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal('modal-ad')">×</button>
@@ -300,7 +292,6 @@
     </div>
 </div>
 
-<!-- 管理者帳號設定 Modal -->
 <div class="modal" id="modal-admin">
     <div class="modal-content" style="max-width: 400px;">
         <button class="modal-close" onclick="closeModal('modal-admin')">×</button>
@@ -356,7 +347,6 @@
     ];
     let currentUser = null;
 
-    // 💡 1. 頁面一載入時，先檢查瀏覽器是否有儲存登入身分（實現重新整理不登出 & 秒開）
     document.addEventListener("DOMContentLoaded", () => {
         const savedUser = localStorage.getItem('localAdminUser');
         if (savedUser) {
@@ -386,13 +376,12 @@
         loginBtn.innerText = "驗證中...";
         loginBtn.disabled = true;
 
-        db.ref('/').once('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            globalAdmins = data.admins || [{ 
+        db.ref('admins').once('value', (snapshot) => {
+            globalAdmins = snapshot.val() || [{ 
                 id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
             }];
             
-            if (!data.admins) {
+            if (!snapshot.val()) {
                 db.ref('admins').set(globalAdmins);
             }
 
@@ -400,17 +389,10 @@
             
             if (foundUser) {
                 currentUser = foundUser;
-                // 💡 登入成功後，將身分寫入瀏覽器快取
                 localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
-                
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('login-error').style.display = 'none';
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
-                
-                globalSets = data.menuSets || [];
-                globalDishes = data.menuDishes || [];
-                globalSchedule = data.menuSchedule || { 0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
-                globalAds = data.menuAds || globalAds;
                 
                 applyPermissions();
                 startLiveSync(); 
@@ -427,11 +409,15 @@
     function handleLogout() {
         if(confirm('確定要登出系統嗎？')) {
             currentUser = null;
-            localStorage.removeItem('localAdminUser'); // 💡 登出時清除快取
-            db.ref('/').off(); 
+            localStorage.removeItem('localAdminUser');
+            db.ref('menuSets').off();
+            db.ref('menuDishes').off();
+            db.ref('menuSchedule').off();
+            db.ref('menuAds').off();
+            db.ref('admins').off();
+            
             document.getElementById('login-username').value = '';
             document.getElementById('login-password').value = '';
-            
             document.querySelectorAll('.nav-btn').forEach(btn => btn.style.display = 'none');
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById('logout-container').style.display = 'none';
@@ -463,31 +449,33 @@
         else switchTab('admins', navAdmins);
     }
 
+    // 💡 獨立分開監聽子節點，完美對應前台
     function startLiveSync() {
-        db.ref('/').on('value', (snapshot) => {
-            if(!currentUser) return; 
-            const data = snapshot.val() || {};
-            globalSets = data.menuSets || [];
-            globalDishes = data.menuDishes || [];
-            globalSchedule = data.menuSchedule || { 0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
-            globalAds = data.menuAds || globalAds;
-            globalAdmins = data.admins || globalAdmins;
-            
-            const activeTab = document.querySelector('.tab-content.active');
-            if(activeTab) {
-                if(activeTab.id === 'tab-dishes') renderData();
-                if(activeTab.id === 'tab-schedule') loadScheduleUI();
-                if(activeTab.id === 'tab-ads') renderAds();
-                if(activeTab.id === 'tab-admins') renderAdmins();
-            }
+        db.ref('menuSets').on('value', (snapshot) => {
+            globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
+            if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
         });
-    }
 
-    function syncToFirebase() {
-        db.ref('menuSets').set(globalSets);
-        db.ref('menuDishes').set(globalDishes);
-        db.ref('menuSchedule').set(globalSchedule);
-        db.ref('menuAds').set(globalAds);
+        db.ref('menuDishes').on('value', (snapshot) => {
+            globalDishes = Array.isArray(snapshot.val()) ? snapshot.val() : [];
+            if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
+            if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+        });
+
+        db.ref('menuSchedule').on('value', (snapshot) => {
+            globalSchedule = snapshot.val() || {};
+            if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+        });
+
+        db.ref('menuAds').on('value', (snapshot) => {
+            globalAds = Array.isArray(snapshot.val()) ? snapshot.val() : globalAds;
+            if(document.getElementById('tab-ads').classList.contains('active')) renderAds();
+        });
+
+        db.ref('admins').on('value', (snapshot) => {
+            globalAdmins = Array.isArray(snapshot.val()) ? snapshot.val() : globalAdmins;
+            if(document.getElementById('tab-admins').classList.contains('active')) renderAdmins();
+        });
     }
 
     function switchTab(tabId, btnElement) {
@@ -502,7 +490,6 @@
         if(tabId === 'admins') renderAdmins();
     }
 
-    // --- 廣告輪播管理邏輯 ---
     function renderAds() {
         const tbody = document.getElementById('ad-list');
         tbody.innerHTML = '';
@@ -529,8 +516,7 @@
 
     function openAdModal(index) {
         document.getElementById('ad-index').value = index;
-        const ad = globalAds[index];
-        
+        const ad = globalAds[index] || {};
         document.getElementById('ad-title').value = ad.title || '';
         document.getElementById('ad-desc').value = ad.desc || '';
         document.getElementById('ad-media-base64').value = ad.media || '';
@@ -604,14 +590,12 @@
         const type = document.getElementById('ad-media-type').value;
 
         if (!title) return alert('請填寫標題');
-
         globalAds[index] = { title, desc, media, type };
-        syncToFirebase();
+        db.ref('menuAds').set(globalAds);
         closeModal('modal-ad');
         alert('廣告內容已更新！');
     }
 
-    // --- 管理者系統 ---
     function renderAdmins() {
         const tbody = document.getElementById('admin-list');
         tbody.innerHTML = '';
@@ -733,7 +717,6 @@
         }
     }
 
-    // --- 套餐與菜色 ---
     function renderData() { renderSetBadges(); renderDishes(); }
     function renderSetBadges() {
         const container = document.getElementById('display-set-badges');
@@ -780,13 +763,16 @@
         } else {
             globalSets.push({ id: 'set_' + Date.now(), name, maxMains: mains, maxSides: sides });
         }
-        syncToFirebase(); resetSetForm(); renderSetModalList();
+        db.ref('menuSets').set(globalSets);
+        resetSetForm(); renderSetModalList();
     }
     function deleteSet(id) {
         if(confirm('確定刪除此套餐？')) {
             globalSets = globalSets.filter(s => s.id !== id);
             globalDishes.forEach(d => { if(d.sets) d.sets = d.sets.filter(x => x !== id); });
-            syncToFirebase(); renderSetModalList();
+            db.ref('menuSets').set(globalSets);
+            db.ref('menuDishes').set(globalDishes);
+            renderSetModalList();
         }
     }
 
@@ -864,7 +850,8 @@
         } else {
             globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets, image });
         }
-        syncToFirebase(); closeModal('modal-dish');
+        db.ref('menuDishes').set(globalDishes);
+        closeModal('modal-dish');
     }
 
     function deleteDish(id) {
@@ -874,7 +861,8 @@
                 if(globalSchedule[day].mains) globalSchedule[day].mains = globalSchedule[day].mains.filter(x => x !== id);
                 if(globalSchedule[day].sides) globalSchedule[day].sides = globalSchedule[day].sides.filter(x => x !== id);
             }
-            syncToFirebase();
+            db.ref('menuDishes').set(globalDishes);
+            db.ref('menuSchedule').set(globalSchedule);
         }
     }
 
@@ -900,7 +888,8 @@
             mains: Array.from(document.querySelectorAll('.main-chk:checked')).map(el => el.value),
             sides: Array.from(document.querySelectorAll('.side-chk:checked')).map(el => el.value)
         };
-        syncToFirebase(); alert('排程儲存成功！');
+        db.ref('menuSchedule').set(globalSchedule);
+        alert('排程儲存成功！');
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }

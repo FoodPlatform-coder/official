@@ -435,7 +435,6 @@
 
     let slideIndex = 0;
     let slideTimer = null;
-
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -459,32 +458,38 @@
         startTimer();
         initSwipeGesture();
         
-        // 保險機制：最多 1.5 秒強制移除載入遮罩，絕對不卡死
+        // 💡 雙重保險防護：1.5秒內強制移除載入遮罩，絕對不卡死
         setTimeout(() => {
             hideLoadingMask();
         }, 1500);
     });
 
-    db.ref('/').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        globalSets = Array.isArray(data.menuSets) ? data.menuSets : [];
-        globalDishes = Array.isArray(data.menuDishes) ? data.menuDishes : [];
-        globalSchedule = data.menuSchedule || {};
-        
-        if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
-            globalAds = data.menuAds;
+    // 💡 關鍵優化：分開獨立監聽子節點，完美對應後台寫入路徑
+    db.ref('menuSets').on('value', (snapshot) => {
+        globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
+        if (currentStep === 'menu') initAppUI();
+    });
+
+    db.ref('menuDishes').on('value', (snapshot) => {
+        globalDishes = Array.isArray(snapshot.val()) ? snapshot.val() : [];
+        if (currentStep === 'menu') changeSetUI();
+    });
+
+    db.ref('menuSchedule').on('value', (snapshot) => {
+        globalSchedule = snapshot.val() || {};
+        if (currentStep === 'menu') changeSetUI();
+    });
+
+    db.ref('menuAds').on('value', (snapshot) => {
+        const adsData = snapshot.val();
+        if (Array.isArray(adsData) && adsData.length > 0) {
+            globalAds = adsData;
             localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
         } else {
             db.ref('menuAds').set(defaultAds);
             globalAds = defaultAds;
         }
-        
         renderAdsCarousel();
-
-        if (currentStep === 'menu') {
-            initAppUI();
-        }
-
         hideLoadingMask();
     });
 
