@@ -422,6 +422,12 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
+// 💡 強制清空所有舊版殘留快取，確保重新抓取 Firebase 雲端最乾淨的資料
+    localStorage.removeItem('localMenuSets');
+    localStorage.removeItem('localMenuDishes');
+    localStorage.removeItem('localMenuSchedule');
+    localStorage.removeItem('localMenuAds');
+
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
@@ -445,6 +451,9 @@
         { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
+
+    // 直接從預設或雲端重新初始化
+    globalAds = defaultAds;
 
     // 💡 1. 頁面載入瞬間：優先讀取本機快取（廣告、套餐、菜色、排程），實現 0 秒秒開！
     let cachedAds = localStorage.getItem('localMenuAds');
