@@ -422,12 +422,6 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
-// 💡 強制清空所有舊版殘留快取，確保重新抓取 Firebase 雲端最乾淨的資料
-    localStorage.removeItem('localMenuSets');
-    localStorage.removeItem('localMenuDishes');
-    localStorage.removeItem('localMenuSchedule');
-    localStorage.removeItem('localMenuAds');
-
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
@@ -452,10 +446,6 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
-    // 直接從預設或雲端重新初始化
-    globalAds = defaultAds;
-
-    // 💡 1. 頁面載入瞬間：優先讀取本機快取（廣告、套餐、菜色、排程），實現 0 秒秒開！
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) { try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; } } else { globalAds = defaultAds; }
 
@@ -473,18 +463,15 @@
         startTimer();
         initSwipeGesture();
         
-        // 如果有快取資料，直接在 0 秒內初始化介面
         if (globalSets.length > 0) {
             initAppUI();
         }
         
-        // 保險機制：最多 0.5 秒強制移除載入遮罩，絕對不卡畫面
         setTimeout(() => {
             hideLoadingMask();
         }, 500);
     });
 
-    // 💡 2. 背景持續與 Firebase 保持即時同步並自動更新快取
     db.ref('menuSets').on('value', (snapshot) => {
         const val = snapshot.val();
         if (Array.isArray(val)) {
@@ -718,12 +705,23 @@
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
 
-        const filteredMains = todaysMains.filter(id => {
+        // 💡 修正防呆：如果今日排程完全空白（老闆還沒勾選），我們自動把所有屬於該套餐的菜色全部列出，避免畫面直接一片空白
+        let finalMains = todaysMains;
+        let finalSides = todaysSides;
+
+        if (finalMains.length === 0) {
+            finalMains = globalDishes.filter(d => d.type === 'main' && d.sets && d.sets.includes(setId)).map(d => d.id);
+        }
+        if (finalSides.length === 0) {
+            finalSides = globalDishes.filter(d => d.type === 'side' && d.sets && d.sets.includes(setId)).map(d => d.id);
+        }
+
+        const filteredMains = finalMains.filter(id => {
             const d = globalDishes.find(dish => dish.id === id);
             return d && d.sets && d.sets.includes(setId);
         });
 
-        const filteredSides = todaysSides.filter(id => {
+        const filteredSides = finalSides.filter(id => {
             const d = globalDishes.find(dish => dish.id === id);
             return d && d.sets && d.sets.includes(setId);
         });
