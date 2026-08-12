@@ -433,42 +433,55 @@
     let slideIndex = 0;
     let slideTimer = null;
 
-    // 💡 1. 頁面一打開的瞬間：立刻從瀏覽器快取讀取廣告並秒開彈窗 (0 延遲)
+    const defaultAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
+        { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
+        { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
+        { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
+        { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
+    ];
+
+    // 💡 1. 頁面打開瞬間：優先讀取本機暫存或預設廣告，確保 0 延遲秒開彈窗
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) {
-        globalAds = JSON.parse(cachedAds);
-        renderAdsCarousel();
+        try {
+            globalAds = JSON.parse(cachedAds);
+        } catch(e) {
+            globalAds = defaultAds;
+        }
     } else {
-        // 如果沒有快取，先用預設廣告頂替，確保彈窗瞬間跳出
-        globalAds = [
-            { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
-            { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
-            { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
-            { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
-            { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
-        ];
-        renderAdsCarousel();
+        globalAds = defaultAds;
     }
+    
+    // 確保 DOM 載入後立刻渲染廣告
+    document.addEventListener("DOMContentLoaded", () => {
+        renderAdsCarousel();
+        startTimer();
+    });
 
-    // 💡 2. 背景持續與 Firebase 保持連線同步 (菜單、排程、與最新廣告)
+    // 💡 2. 背景與 Firebase 保持即時同步
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
         globalDishes = data.menuDishes || [];
         globalSchedule = data.menuSchedule || {};
         
-        // 如果後台有設定廣告，更新變數、寫入本機快取，並在背景默默刷新輪播內容
+        // 檢查雲端廣告，若有則同步更新並存入快取
         if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
             globalAds = data.menuAds;
             localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
-            renderAdsCarousel();
+        } else {
+            // 如果雲端完全沒有，順便幫雲端初始化寫入預設廣告
+            db.ref('menuAds').set(defaultAds);
+            globalAds = defaultAds;
         }
         
+        renderAdsCarousel();
+
         if (currentStep === 'menu') {
             initAppUI();
         }
 
-        // 資料到齊，平滑淡出載入遮罩
         const mask = document.getElementById('loading-mask');
         if (mask) {
             mask.style.opacity = '0';
@@ -476,7 +489,7 @@
         }
     });
 
-    // 💡 動態產生廣告輪播 (維持您原本的精準排版)
+    // 💡 穩定動態產生廣告輪播
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -485,11 +498,13 @@
         slidesContainer.innerHTML = '';
         dotsContainer.innerHTML = '';
 
+        if (!globalAds || globalAds.length === 0) return;
+
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
             
             let mediaHtml = '';
-            if (ad.media) {
+            if (ad.media && ad.media.trim() !== '') {
                 if (ad.type === 'video') {
                     mediaHtml = `<video src="${ad.media}" class="slide-media" autoplay muted loop playsinline></video>`;
                 } else {
@@ -526,6 +541,7 @@
 
     function nextSlide() {
         let slides = document.querySelectorAll('.carousel-slide');
+        if (slides.length === 0) return;
         slideIndex++;
         if (slideIndex >= slides.length) slideIndex = 0;
         showSlides(slideIndex);
@@ -548,13 +564,10 @@
     }
 
     function closeAdModal() {
-        document.getElementById('ad-modal').style.display = 'none';
+        const modal = document.getElementById('ad-modal');
+        if (modal) modal.style.display = 'none';
         clearInterval(slideTimer); 
     }
-
-    window.onload = function() {
-        startTimer();
-    };
 
 
     function initAppUI() {
