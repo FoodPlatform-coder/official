@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一家知煮 - 管理後台 (廣告控管版)</title>
+    <title>一家知煮 - 管理後台</title>
     <style>
         :root { --primary: #00B900; --bg: #f4f7f6; --text: #333; --border: #ddd; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); margin: 0; display: flex; color: var(--text); }
@@ -155,7 +155,7 @@
         <div class="top-controls">
             <h3 style="margin:0;">廣告輪播管理 (共 5 個版位)</h3>
         </div>
-        <p style="color: #666; font-size: 14px;">您可以編輯前台開場彈出視窗中的 5 個輪播分頁，可設定標題、文宣內容以及上傳圖片或短片檔。</p>
+        <p style="color: #666; font-size: 14px;">您可以編輯前台開場彈出視窗中的 5 個輪播分頁，可設定標題、文宣內容以及上傳圖片或影片檔。</p>
 
         <table>
             <thead>
@@ -274,7 +274,10 @@
         <input type="hidden" id="ad-media-type">
 
         <div class="form-group">
-            <label>上傳圖片或影片檔</label>
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>上傳圖片或影片檔 (留空則為純文字廣告)</span>
+                <button type="button" class="btn btn-delete" style="padding: 2px 8px; font-size:12px;" onclick="clearAdMedia()">清除媒體檔</button>
+            </label>
             <div class="img-upload-preview" onclick="document.getElementById('ad-media-upload').click()">
                 <span id="ad-upload-text">點擊上傳圖片或影片</span>
                 <img id="ad-img-preview" src="" style="display:none;">
@@ -353,6 +356,22 @@
     ];
     let currentUser = null;
 
+    // 💡 1. 頁面一載入時，先檢查瀏覽器是否有儲存登入身分（實現重新整理不登出 & 秒開）
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedUser = localStorage.getItem('localAdminUser');
+        if (savedUser) {
+            try {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
+                applyPermissions();
+                startLiveSync(); 
+            } catch(e) {
+                localStorage.removeItem('localAdminUser');
+            }
+        }
+    });
+
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
@@ -362,6 +381,10 @@
             document.getElementById('login-error').style.display = 'block';
             return;
         }
+
+        const loginBtn = document.querySelector('#login-screen .btn-save');
+        loginBtn.innerText = "驗證中...";
+        loginBtn.disabled = true;
 
         db.ref('/').once('value', (snapshot) => {
             const data = snapshot.val() || {};
@@ -377,6 +400,9 @@
             
             if (foundUser) {
                 currentUser = foundUser;
+                // 💡 登入成功後，將身分寫入瀏覽器快取
+                localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
+                
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('login-error').style.display = 'none';
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
@@ -392,12 +418,16 @@
                 document.getElementById('login-error').innerText = "帳號或密碼錯誤，請重試！";
                 document.getElementById('login-error').style.display = 'block';
             }
+
+            loginBtn.innerText = "登入";
+            loginBtn.disabled = false;
         });
     }
 
     function handleLogout() {
         if(confirm('確定要登出系統嗎？')) {
             currentUser = null;
+            localStorage.removeItem('localAdminUser'); // 💡 登出時清除快取
             db.ref('/').off(); 
             document.getElementById('login-username').value = '';
             document.getElementById('login-password').value = '';
@@ -477,7 +507,7 @@
         const tbody = document.getElementById('ad-list');
         tbody.innerHTML = '';
         globalAds.forEach((ad, index) => {
-            let mediaPreview = '<span style="color:#888;">無媒體</span>';
+            let mediaPreview = '<span style="color:#888;">(純文字廣告)</span>';
             if (ad.media) {
                 if (ad.type === 'video') {
                     mediaPreview = `<video src="${ad.media}" class="dish-thumbnail" muted></video>`;
@@ -555,6 +585,15 @@
             };
             reader.readAsDataURL(file);
         }
+    }
+
+    function clearAdMedia() {
+        document.getElementById('ad-media-base64').value = '';
+        document.getElementById('ad-media-type').value = '';
+        document.getElementById('ad-img-preview').style.display = 'none';
+        document.getElementById('ad-video-preview').style.display = 'none';
+        document.getElementById('ad-upload-text').style.display = 'block';
+        document.getElementById('ad-media-upload').value = '';
     }
 
     function saveAd() {
@@ -675,6 +714,7 @@
                     currentUser.password = pass;
                     if(currentUser.role !== 'superadmin') currentUser.permissions = perms;
                     document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
+                    localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
                     applyPermissions();
                 }
             }
