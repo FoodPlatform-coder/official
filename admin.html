@@ -373,6 +373,7 @@
     });
 
     // 💡 優化後的登入函式 (加入讀取動畫與快取)
+    // 💡 優化後的閃電登入函式 (只抓取 admins 節點，1秒內秒開)
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
@@ -383,45 +384,47 @@
             return;
         }
 
-        // 顯示按鈕讀取中狀態，改善等待體驗
         const loginBtn = document.querySelector('#login-screen .btn-save');
         loginBtn.innerText = "驗證中...";
         loginBtn.disabled = true;
 
-        db.ref('/').once('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            globalAdmins = data.admins || [{ 
-                id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
-            }];
+        // 💡 關鍵優化：只抓取 admins 節點，不用再下載整個資料庫！
+        db.ref('admins').once('value', (snapshot) => {
+            const adminsData = snapshot.val();
             
-            if (!data.admins) {
+            if (!adminsData) {
+                // 如果雲端完全沒有管理者，初始化預設 superadmin
+                globalAdmins = [{ 
+                    id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
+                }];
                 db.ref('admins').set(globalAdmins);
+            } else {
+                globalAdmins = adminsData;
             }
 
             const foundUser = globalAdmins.find(a => a.username === user && a.password === pass);
             
             if (foundUser) {
                 currentUser = foundUser;
-                // 將登入狀態存入瀏覽器快取
                 localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
                 
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('login-error').style.display = 'none';
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
                 
-                globalSets = data.menuSets || [];
-                globalDishes = data.menuDishes || [];
-                globalSchedule = data.menuSchedule || { 0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
-                globalAds = data.menuAds || [];
-                
                 applyPermissions();
-                startLiveSync();
+                startLiveSync(); // 登入成功後才開始在背景抓取其他菜色與廣告資料
                 initIdleTimer();
             } else {
                 document.getElementById('login-error').innerText = "帳號或密碼錯誤，請重試！";
                 document.getElementById('login-error').style.display = 'block';
             }
             
+            loginBtn.innerText = "登入";
+            loginBtn.disabled = false;
+        }, (error) => {
+            // 網路錯誤防護
+            alert("連線雲端失敗，請檢查網路狀態！");
             loginBtn.innerText = "登入";
             loginBtn.disabled = false;
         });
