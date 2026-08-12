@@ -581,27 +581,50 @@
     }
 
     // 💡 3. 初始化手機左右滑動手勢 (Swipe Gesture)
+    // 💡 升級版：完美支援手機觸控與滑鼠拖曳的左右滑動手勢
     function initSwipeGesture() {
         const sliderContainer = document.getElementById('carousel-slides');
         if (!sliderContainer) return;
 
+        let isDragging = false;
+
+        // 手機觸控開始
         sliderContainer.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
+            touchStartX = e.touches[0].clientX;
+            isDragging = true;
         }, { passive: true });
 
+        // 手機觸控結束
         sliderContainer.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
+            if (!isDragging) return;
+            touchEndX = e.changedTouches[0].clientX;
             handleSwipe();
+            isDragging = false;
         }, { passive: true });
+
+        // 額外支援電腦滑鼠拖曳（方便您在電腦上測試滑動）
+        sliderContainer.addEventListener('mousedown', (e) => {
+            touchStartX = e.clientX;
+            isDragging = true;
+        });
+
+        sliderContainer.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            touchEndX = e.clientX;
+            handleSwipe();
+            isDragging = false;
+        });
     }
 
     function handleSwipe() {
-        const threshold = 50; // 滑動距離大於 50px 才會觸發切換
-        if (touchEndX < touchStartX - threshold) {
+        const threshold = 40; // 降低觸發門檻（40px 即可滑動切換，手感更靈敏）
+        const diff = touchEndX - touchStartX;
+
+        if (diff < -threshold) {
             // 往左滑 ➔ 下一張
             nextSlide();
             resetTimer();
-        } else if (touchEndX > touchStartX + threshold) {
+        } else if (diff > threshold) {
             // 往右滑 ➔ 上一張
             prevSlide();
             resetTimer();
