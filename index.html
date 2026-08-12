@@ -440,7 +440,6 @@
     let slideIndex = 0;
     let slideTimer = null;
 
-    // 觸控滑動專用變數
     let touchStartX = 0;
     let touchEndX = 0;
 
@@ -452,13 +451,10 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
+    // 💡 1. 頁面載入瞬間：優先讀取本機快取廣告，確保 0 延遲秒開
     let cachedAds = localStorage.getItem('localMenuAds');
     if (cachedAds) {
-        try {
-            globalAds = JSON.parse(cachedAds);
-        } catch(e) {
-            globalAds = defaultAds;
-        }
+        try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; }
     } else {
         globalAds = defaultAds;
     }
@@ -466,9 +462,15 @@
     document.addEventListener("DOMContentLoaded", () => {
         renderAdsCarousel();
         startTimer();
-        initSwipeGesture(); // 啟動滑動手勢監聽
+        initSwipeGesture();
+        
+        // 💡 【雙重保險】強制解鎖：就算 Firebase 連線較慢，最多等待 1.5 秒強制移除載入遮罩！
+        setTimeout(() => {
+            hideLoadingMask();
+        }, 1500);
     });
 
+    // 💡 2. 背景持續與 Firebase 保持即時同步
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
@@ -489,12 +491,20 @@
             initAppUI();
         }
 
-        const mask = document.getElementById('loading-mask');
-        if (mask) {
-            mask.style.opacity = '0';
-            setTimeout(() => mask.style.display = 'none', 300);
-        }
+        // 資料順利抓回，安全移除遮罩
+        hideLoadingMask();
     });
+
+    // 💡 獨立的關閉遮罩函式（防止重複呼叫出錯）
+    function hideLoadingMask() {
+        const mask = document.getElementById('loading-mask');
+        if (mask && mask.style.display !== 'none') {
+            mask.style.opacity = '0';
+            setTimeout(() => {
+                mask.style.display = 'none';
+            }, 300);
+        }
+    }
 
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
@@ -577,21 +587,17 @@
         startTimer();
     }
 
-    // 💡 3. 初始化手機左右滑動手勢 (Swipe Gesture)
-    // 💡 升級版：完美支援手機觸控與滑鼠拖曳的左右滑動手勢
     function initSwipeGesture() {
         const sliderContainer = document.getElementById('carousel-slides');
         if (!sliderContainer) return;
 
         let isDragging = false;
 
-        // 手機觸控開始
         sliderContainer.addEventListener('touchstart', (e) => {
             touchStartX = e.touches[0].clientX;
             isDragging = true;
         }, { passive: true });
 
-        // 手機觸控結束
         sliderContainer.addEventListener('touchend', (e) => {
             if (!isDragging) return;
             touchEndX = e.changedTouches[0].clientX;
@@ -599,7 +605,6 @@
             isDragging = false;
         }, { passive: true });
 
-        // 額外支援電腦滑鼠拖曳（方便您在電腦上測試滑動）
         sliderContainer.addEventListener('mousedown', (e) => {
             touchStartX = e.clientX;
             isDragging = true;
@@ -614,15 +619,13 @@
     }
 
     function handleSwipe() {
-        const threshold = 40; // 降低觸發門檻（40px 即可滑動切換，手感更靈敏）
+        const threshold = 40; 
         const diff = touchEndX - touchStartX;
 
         if (diff < -threshold) {
-            // 往左滑 ➔ 下一張
             nextSlide();
             resetTimer();
         } else if (diff > threshold) {
-            // 往右滑 ➔ 上一張
             prevSlide();
             resetTimer();
         }
