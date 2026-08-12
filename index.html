@@ -29,11 +29,11 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 全螢幕霧化載入遮罩 */
+        /* 全螢幕霧化載入遮罩：確保資料未就緒前絕不讓用戶操作 */
         #loading-mask {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             z-index: 2500;
@@ -91,7 +91,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 4:3 比例輪播容器與手勢支援 */
         .carousel-container {
             position: relative;
             width: 100%;
@@ -307,7 +306,7 @@
             max-width: 500px;
             background: #fff;
             padding: 15px 20px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            box-shadow: -2px 10px rgba(0,0,0,0.1);
             box-sizing: border-box;
             display: flex;
             gap: 10px;
@@ -356,9 +355,10 @@
 </head>
 <body>
 
+<!-- 載入中遮罩：確保每次進入都是乾淨且同步自雲端的最新資料 -->
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">載入點餐系統中...</div>
+    <div class="loading-text" id="loading-text">正在同步最新菜單...</div>
 </div>
 
 <!-- ================= 彈出式廣告/公告輪播視窗 ================= -->
@@ -422,6 +422,12 @@
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
 
+    // 💡 徹底清空所有可能造成殘留的舊快取
+    localStorage.removeItem('localMenuSets');
+    localStorage.removeItem('localMenuDishes');
+    localStorage.removeItem('localMenuSchedule');
+    localStorage.removeItem('localMenuAds');
+
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
@@ -438,6 +444,8 @@
     let touchStartX = 0;
     let touchEndX = 0;
 
+    let dataLoadedCount = 0; // 用於計算雲端核心數據是否已全數到位
+
     const defaultAds = [
         { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
         { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
@@ -446,75 +454,61 @@
         { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
     ];
 
-    // 💡 1. 頁面載入瞬間：一口氣把所有本機快取（廣告、套餐、菜色、排程）瞬間讀出，實現 0 秒秒開！
-    let cachedAds = localStorage.getItem('localMenuAds');
-    if (cachedAds) { try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; } } else { globalAds = defaultAds; }
-
-    let cachedSets = localStorage.getItem('localMenuSets');
-    if (cachedSets) { try { globalSets = JSON.parse(cachedSets); } catch(e) { globalSets = []; } }
-
-    let cachedDishes = localStorage.getItem('localMenuDishes');
-    if (cachedDishes) { try { globalDishes = JSON.parse(cachedDishes); } catch(e) { globalDishes = []; } }
-
-    let cachedSchedule = localStorage.getItem('localMenuSchedule');
-    if (cachedSchedule) { try { globalSchedule = JSON.parse(cachedSchedule); } catch(e) { globalSchedule = {}; } }
-    
     document.addEventListener("DOMContentLoaded", () => {
-        renderAdsCarousel();
         startTimer();
         initSwipeGesture();
         
-        // 💡 關鍵：只要本地有任何快取資料，點進去瞬間 0 秒把套餐和菜色全部畫好！
-        if (globalSets.length > 0 || globalDishes.length > 0) {
-            initAppUI();
-        }
-        
-        // 極速移除載入遮罩
-        setTimeout(() => {
+        // 啟動雲端即時同步，並透過計數器確保資料全數回來才解開遮罩
+        initCloudSync();
+    });
+
+    function initCloudSync() {
+        // 1. 同步套餐
+        db.ref('menuSets').on('value', (snapshot) => {
+            const val = snapshot.val();
+            globalSets = Array.isArray(val) ? val : [];
+            checkDataReady("sets");
+        });
+
+        // 2. 同步菜色
+        db.ref('menuDishes').on('value', (snapshot) => {
+            const val = snapshot.val();
+            globalDishes = Array.isArray(val) ? val : [];
+            checkDataReady("dishes");
+        });
+
+        // 3. 同步排程
+        db.ref('menuSchedule').on('value', (snapshot) => {
+            const val = snapshot.val();
+            globalSchedule = val || {};
+            checkDataReady("schedule");
+        });
+
+        // 4. 同步廣告
+        db.ref('menuAds').on('value', (snapshot) => {
+            const adsData = snapshot.val();
+            if (Array.isArray(adsData) && adsData.length > 0) {
+                globalAds = adsData;
+            } else {
+                db.ref('menuAds').set(defaultAds);
+                globalAds = defaultAds;
+            }
+            renderAdsCarousel();
+            checkDataReady("ads");
+        });
+    }
+
+    // 💡 核心防護：確保四大核心模組（套餐、菜色、排程、廣告）全部從雲端下載完畢，才平滑關閉遮罩與渲染介面
+    function checkDataReady(moduleName) {
+        dataLoadedCount++;
+        // 當四大模組都回傳過一次後，正式渲染畫面並解鎖遮罩
+        if (dataLoadedCount >= 4) {
+            if (currentStep === 'menu') {
+                initAppUI();
+            }
             hideLoadingMask();
-        }, 200);
-    });
-
-    // 💡 2. 背景持續與 Firebase 保持即時同步並自動更新快取
-    db.ref('menuSets').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (Array.isArray(val)) {
-            globalSets = val;
-            localStorage.setItem('localMenuSets', JSON.stringify(globalSets));
-            if (currentStep === 'menu') initAppUI();
         }
-    });
-
-    db.ref('menuDishes').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (Array.isArray(val)) {
-            globalDishes = val;
-            localStorage.setItem('localMenuDishes', JSON.stringify(globalDishes));
-            if (currentStep === 'menu') changeSetUI();
-        }
-    });
-
-    db.ref('menuSchedule').on('value', (snapshot) => {
-        const val = snapshot.val();
-        if (val) {
-            globalSchedule = val;
-            localStorage.setItem('localMenuSchedule', JSON.stringify(globalSchedule));
-            if (currentStep === 'menu') changeSetUI();
-        }
-    });
-
-    db.ref('menuAds').on('value', (snapshot) => {
-        const adsData = snapshot.val();
-        if (Array.isArray(adsData) && adsData.length > 0) {
-            globalAds = adsData;
-            localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
-        } else {
-            db.ref('menuAds').set(defaultAds);
-            globalAds = defaultAds;
-        }
-        renderAdsCarousel();
-        hideLoadingMask();
-    });
+    }
 
     function hideLoadingMask() {
         const mask = document.getElementById('loading-mask');
@@ -657,10 +651,6 @@
         clearInterval(slideTimer); 
     }
 
-    window.onload = function() {
-        startTimer();
-    };
-
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
         if (!setSelect) return;
@@ -709,7 +699,6 @@
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
 
-        // 防呆：如果今日排程完全空白，自動列出所有屬於該套餐的菜色
         let finalMains = todaysMains;
         let finalSides = todaysSides;
 
