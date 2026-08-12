@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一家知煮 - 管理後台</title>
+    <title>一家知煮 - 管理後台（全新架構）</title>
     <style>
         :root { --primary: #00B900; --bg: #f4f7f6; --text: #333; --border: #ddd; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); margin: 0; display: flex; color: var(--text); }
@@ -37,7 +37,6 @@
         .btn-danger { background: #e74c3c; width: 100%; padding: 12px; font-size: 16px; }
         
         .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .top-controls-left { display: flex; gap: 10px; align-items: center; }
         
         .set-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px dashed #ccc; }
         .badge { background: #e3f2fd; color: #1976d2; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #bbdefb; display: flex; align-items: center; gap: 5px; }
@@ -67,14 +66,8 @@
 <div id="login-screen">
     <div class="login-box">
         <h2 style="color: var(--primary); margin-top:0;">後台登入系統</h2>
-        <div class="form-group">
-            <label>管理員帳號</label>
-            <input type="text" id="login-username" class="form-control" placeholder="請輸入帳號">
-        </div>
-        <div class="form-group">
-            <label>登入密碼</label>
-            <input type="password" id="login-password" class="form-control" placeholder="請輸入密碼">
-        </div>
+        <div class="form-group"><label>管理員帳號</label><input type="text" id="login-username" class="form-control" placeholder="請輸入帳號"></div>
+        <div class="form-group"><label>登入密碼</label><input type="password" id="login-password" class="form-control" placeholder="請輸入密碼"></div>
         <button class="btn btn-save" style="margin-top: 10px;" onclick="handleLogin()">登入</button>
         <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; display: none;">帳號或密碼錯誤，請重試！</div>
     </div>
@@ -95,12 +88,9 @@
 </div>
 
 <div class="content">
-    <!-- 1. MENU 菜單管理 -->
     <div id="tab-dishes" class="tab-content card">
         <div class="top-controls">
-            <div class="top-controls-left">
-                <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="openSetModal()">📋 套餐管理</button>
-            </div>
+            <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="openSetModal()">📋 套餐管理</button>
             <button class="btn btn-primary" onclick="openDishModal()">＋ 新增菜色</button>
         </div>
 
@@ -111,22 +101,14 @@
 
         <table>
             <thead>
-                <tr>
-                    <th>圖片</th>
-                    <th>名稱</th>
-                    <th>類別</th>
-                    <th>所屬套餐</th>
-                    <th style="width: 130px;">操作</th>
-                </tr>
+                <tr><th>圖片</th><th>名稱</th><th>類別</th><th>所屬套餐</th><th style="width: 130px;">操作</th></tr>
             </thead>
             <tbody id="dish-list"></tbody>
         </table>
     </div>
 
-    <!-- 2. 每日排程設定 -->
     <div id="tab-schedule" class="tab-content card">
         <h3>設定每日供應菜色</h3>
-        <p style="color: #666; font-size: 14px;">請勾選要在當天顯示於前台的菜色，未勾選的將不會顯示。</p>
         <div class="form-group" style="max-width: 200px;">
             <label>選擇星期：</label>
             <select class="form-control" id="day-select" onchange="loadScheduleUI()">
@@ -136,52 +118,34 @@
         </div>
         
         <div style="margin-top: 20px;">
-            <h4>[V] 勾選該日提供的主菜</h4>
+            <h4>勾選該日提供的主菜</h4>
             <div id="schedule-mains" class="checkbox-group"></div>
             
-            <h4 style="margin-top:20px;">[V] 勾選該日提供的配菜</h4>
+            <h4 style="margin-top:20px;">勾選該日提供的配菜</h4>
             <div id="schedule-sides" class="checkbox-group"></div>
         </div>
 
         <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程</button>
     </div>
 
-    <!-- 3. 廣告輪播管理 -->
     <div id="tab-ads" class="tab-content card">
-        <div class="top-controls">
-            <h3 style="margin:0;">廣告輪播管理 (共 5 個版位)</h3>
-        </div>
-        <p style="color: #666; font-size: 14px;">您可以編輯前台開場彈出視窗中的 5 個輪播分頁，可設定標題、文宣內容以及上傳或移除圖片/影片檔。</p>
-
+        <h3>廣告輪播管理 (共 5 個版位)</h3>
         <table>
             <thead>
-                <tr>
-                    <th>版位編號</th>
-                    <th>預覽媒體</th>
-                    <th>標題</th>
-                    <th>文宣內容</th>
-                    <th style="width: 100px;">操作</th>
-                </tr>
+                <tr><th>版位編號</th><th>標題</th><th>內容</th><th style="width: 100px;">操作</th></tr>
             </thead>
             <tbody id="ad-list"></tbody>
         </table>
     </div>
 
-    <!-- 4. 管理者帳號設定 -->
     <div id="tab-admins" class="tab-content card">
         <div class="top-controls">
             <h3 style="margin:0;">管理者帳號系統</h3>
-            <button id="btn-add-admin" class="btn btn-primary" onclick="openAdminModal()">新增管理者</button>
+            <button class="btn btn-primary" onclick="openAdminModal()">新增管理者</button>
         </div>
-
         <table>
             <thead>
-                <tr>
-                    <th>帳號</th>
-                    <th>密碼</th>
-                    <th>擁有權限</th>
-                    <th style="width: 160px;">操作</th>
-                </tr>
+                <tr><th>帳號</th><th>密碼</th><th>擁有權限</th><th style="width: 160px;">操作</th></tr>
             </thead>
             <tbody id="admin-list"></tbody>
         </table>
@@ -191,32 +155,20 @@
 <!-- ================= MODALS ================= -->
 <div class="modal" id="modal-sets">
     <div class="modal-content">
-        <button class="modal-close" onclick="closeModal('modal-sets')">×</button>
+        <button class="modal-close" onclick="closeModal('modal-sets')">&times;</button>
         <h3>套餐管理</h3>
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
             <h4 id="set-form-title" style="margin-top: 0;">新增套餐</h4>
             <input type="hidden" id="edit-set-id">
             <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-                <div class="form-group" style="margin-bottom: 0; flex: 2; min-width: 150px;">
-                    <label>套餐名稱</label>
-                    <input type="text" id="new-set-name" class="form-control" placeholder="例: 套餐三">
-                </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 80px;">
-                    <label>主菜數量</label>
-                    <input type="number" id="new-set-mains" class="form-control" value="1" min="1">
-                </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 80px;">
-                    <label>配菜數量</label>
-                    <input type="number" id="new-set-sides" class="form-control" value="1" min="1">
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    <button class="btn btn-primary" id="btn-save-set" onclick="saveSet()" style="height: 40px; white-space: nowrap;">儲存</button>
-                    <button class="btn btn-edit" id="btn-cancel-set" onclick="resetSetForm()" style="height: 40px; display: none; white-space: nowrap;">取消</button>
-                </div>
+                <div class="form-group" style="margin-bottom: 0; flex: 2;"><label>套餐名稱</label><input type="text" id="new-set-name" class="form-control" placeholder="例: 套餐三"></div>
+                <div class="form-group" style="margin-bottom: 0; flex: 1;"><label>主菜數</label><input type="number" id="new-set-mains" class="form-control" value="1" min="1"></div>
+                <div class="form-group" style="margin-bottom: 0; flex: 1;"><label>配菜數</label><input type="number" id="new-set-sides" class="form-control" value="1" min="1"></div>
+                <button class="btn btn-primary" onclick="saveSet()" style="height: 40px;">儲存</button>
             </div>
         </div>
-        <table style="margin-top: 0;">
-            <thead><tr><th>套餐名稱</th><th>規則 (主/配)</th><th style="width: 130px;">操作</th></tr></thead>
+        <table>
+            <thead><tr><th>套餐名稱</th><th>規則</th><th style="width: 130px;">操作</th></tr></thead>
             <tbody id="set-list-modal"></tbody>
         </table>
     </div>
@@ -224,7 +176,7 @@
 
 <div class="modal" id="modal-dish">
     <div class="modal-content">
-        <button class="modal-close" onclick="closeModal('modal-dish')">×</button>
+        <button class="modal-close" onclick="closeModal('modal-dish')">&times;</button>
         <h3 id="dish-modal-title">新增菜色</h3>
         <input type="hidden" id="dish-id">
         <input type="hidden" id="dish-img-base64">
@@ -238,98 +190,27 @@
             <input type="file" id="dish-img-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
         </div>
 
-        <div class="form-group">
-            <label>菜色名稱</label>
-            <input type="text" id="dish-name" class="form-control" placeholder="請輸入名稱" required>
-        </div>
-        
-        <div class="form-group">
-            <label>類別</label>
-            <select id="dish-type" class="form-control"><option value="main">主菜</option><option value="side">配菜</option></select>
-        </div>
-
-        <div class="form-group">
-            <label>配合哪個套餐 (可複選)</label>
-            <div id="dish-set-checkboxes" class="checkbox-group"></div>
-        </div>
-
-        <button class="btn btn-save" onclick="saveDish()" style="margin-top: 10px;">儲存菜色</button>
+        <div class="form-group"><label>菜色名稱</label><input type="text" id="dish-name" class="form-control" required></div>
+        <div class="form-group"><label>類別</label><select id="dish-type" class="form-control"><option value="main">主菜</option><option value="side">配菜</option></select></div>
+        <div class="form-group"><label>配合套餐</label><div id="dish-set-checkboxes" class="checkbox-group"></div></div>
+        <button class="btn btn-save" onclick="saveDish()">儲存菜色</button>
     </div>
 </div>
 
 <div class="modal" id="modal-ad">
     <div class="modal-content">
-        <button class="modal-close" onclick="closeModal('modal-ad')">×</button>
-        <h3 id="ad-modal-title">編輯廣告版位</h3>
+        <button class="modal-close" onclick="closeModal('modal-ad')">&times;</button>
+        <h3>編輯廣告版位</h3>
         <input type="hidden" id="ad-index">
-        <input type="hidden" id="ad-media-base64">
-        <input type="hidden" id="ad-media-type">
-
-        <div class="form-group">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
-                <span>上傳圖片或影片檔 (留空則為純文字廣告)</span>
-                <button type="button" class="btn btn-delete" style="padding: 2px 8px; font-size:12px;" onclick="clearAdMedia()">清除媒體檔</button>
-            </label>
-            <div class="img-upload-preview" onclick="document.getElementById('ad-media-upload').click()">
-                <span id="ad-upload-text">點擊上傳圖片或影片</span>
-                <img id="ad-img-preview" src="" style="display:none;">
-                <video id="ad-video-preview" src="" style="display:none;" controls></video>
-            </div>
-            <input type="file" id="ad-media-upload" accept="image/*,video/*" style="display: none;" onchange="handleAdMediaUpload(event)">
-        </div>
-
-        <div class="form-group">
-            <label>廣告標題</label>
-            <input type="text" id="ad-title" class="form-control" placeholder="輸入標題" required>
-        </div>
-
-        <div class="form-group">
-            <label>文宣詳細內容</label>
-            <textarea id="ad-desc" class="form-control" rows="4" placeholder="輸入文宣內容..."></textarea>
-        </div>
-
-        <button class="btn btn-save" onclick="saveAd()" style="margin-top: 10px;">儲存廣告</button>
-    </div>
-</div>
-
-<div class="modal" id="modal-admin">
-    <div class="modal-content" style="max-width: 400px;">
-        <button class="modal-close" onclick="closeModal('modal-admin')">×</button>
-        <h3 id="admin-modal-title">新增管理者</h3>
-        <input type="hidden" id="edit-admin-id">
-        
-        <div class="form-group">
-            <label>管理員帳號</label>
-            <input type="text" id="admin-username" class="form-control" placeholder="請輸入帳號" required>
-        </div>
-        <div class="form-group">
-            <label>登入密碼</label>
-            <input type="text" id="admin-password" class="form-control" placeholder="請輸入密碼" required>
-        </div>
-        
-        <div class="form-group" id="admin-permissions-group">
-            <label>授權功能 (可複選)</label>
-            <div class="checkbox-group">
-                <label class="checkbox-item"><input type="checkbox" class="admin-perm-chk" value="dishes"> MENU 菜單</label>
-                <label class="checkbox-item"><input type="checkbox" class="admin-perm-chk" value="schedule"> 每日排程設定</label>
-                <label class="checkbox-item"><input type="checkbox" class="admin-perm-chk" value="ads"> 廣告輪播管理</label>
-            </div>
-        </div>
-
-        <button class="btn btn-save" onclick="saveAdmin()" style="margin-top: 10px;">儲存帳號</button>
+        <div class="form-group"><label>標題</label><input type="text" id="ad-title" class="form-control"></div>
+        <div class="form-group"><label>內容</label><textarea id="ad-desc" class="form-control" rows="3"></textarea></div>
+        <button class="btn btn-save" onclick="saveAd()">儲存廣告</button>
     </div>
 </div>
 
 <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
-      authDomain: "foodplatform-bf5c4.firebaseapp.com",
-      databaseURL: "https://foodplatform-bf5c4-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "foodplatform-bf5c4",
-      storageBucket: "foodplatform-bf5c4.firebasestorage.app",
-      messagingSenderId: "1074266828425",
-      appId: "1:1074266828425:web:76167db17c03b56961e058",
-      measurementId: "G-0JD55K4YN2"
+      databaseURL: "https://fir-config-6bb21-default-rtdb.asia-southeast1.firebasedatabase.app"
     };
     if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
@@ -338,176 +219,81 @@
     let globalDishes = [];
     let globalSchedule = {};
     let globalAdmins = [];
-    let globalAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
-        { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
-        { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
-        { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
-        { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
-    ];
+    let globalAds = [];
     let currentUser = null;
-
-    // 💡 1. 優先從本機快取讀取（實現後台 0 秒秒開）
-    let cachedAdminSets = localStorage.getItem('localAdminSets');
-    if (cachedAdminSets) { try { globalSets = JSON.parse(cachedAdminSets); } catch(e) { globalSets = []; } }
-
-    let cachedAdminDishes = localStorage.getItem('localAdminDishes');
-    if (cachedAdminDishes) { try { globalDishes = JSON.parse(cachedAdminDishes); } catch(e) { globalDishes = []; } }
-
-    let cachedAdminSchedule = localStorage.getItem('localAdminSchedule');
-    if (cachedAdminSchedule) { try { globalSchedule = JSON.parse(cachedAdminSchedule); } catch(e) { globalSchedule = {}; } }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        const savedUser = localStorage.getItem('localAdminUser');
-        if (savedUser) {
-            try {
-                currentUser = JSON.parse(savedUser);
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
-                applyPermissions();
-                
-                // 💡 登入瞬間立刻用快取渲染，畫面 0 秒出現
-                renderData();
-                startLiveSync(); 
-            } catch(e) {
-                localStorage.removeItem('localAdminUser');
-            }
-        }
-    });
 
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
-        
-        if (!user || !pass) {
-            document.getElementById('login-error').innerText = "請輸入帳號密碼";
-            document.getElementById('login-error').style.display = 'block';
-            return;
-        }
+        if (!user || !pass) return alert('請輸入帳號密碼');
 
-        const loginBtn = document.querySelector('#login-screen .btn-save');
-        loginBtn.innerText = "驗證中...";
-        loginBtn.disabled = true;
-
-        db.ref('admins').once('value', (snapshot) => {
-            globalAdmins = snapshot.val() || [{ 
-                id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
-            }];
+        db.ref('/').once('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            globalAdmins = data.admins || [{ id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] }];
             
-            if (!snapshot.val()) {
-                db.ref('admins').set(globalAdmins);
-            }
+            if (!data.admins) db.ref('admins').set(globalAdmins);
 
             const foundUser = globalAdmins.find(a => a.username === user && a.password === pass);
-            
             if (foundUser) {
                 currentUser = foundUser;
-                localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('login-error').style.display = 'none';
-                document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
+                document.getElementById('current-user-info').innerText = `身分: ${currentUser.username}`;
                 
-                applyPermissions();
-                renderData(); // 登入瞬間渲染
-                startLiveSync(); 
-            } else {
-                document.getElementById('login-error').innerText = "帳號或密碼錯誤，請重試！";
-                document.getElementById('login-error').style.display = 'block';
-            }
+                globalSets = data.menuSets || [];
+                globalDishes = data.menuDishes || [];
+                globalSchedule = data.menuSchedule || {};
+                globalAds = data.menuAds || [
+                    { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", media: "", type: "" },
+                    { title: "人氣套餐上線", desc: "精選主菜搭配新鮮時蔬。", media: "", type: "" },
+                    { title: "會員限定優惠", desc: "加入官方LINE享有專屬折扣。", media: "", type: "" },
+                    { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。", media: "", type: "" },
+                    { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！", media: "", type: "" }
+                ];
 
-            loginBtn.innerText = "登入";
-            loginBtn.disabled = false;
+                applyPermissions();
+                startLiveSync();
+            } else {
+                alert('帳號或密碼錯誤！');
+            }
         });
     }
 
     function handleLogout() {
-        if(confirm('確定要登出系統嗎？')) {
-            currentUser = null;
-            localStorage.removeItem('localAdminUser');
-            db.ref('menuSets').off();
-            db.ref('menuDishes').off();
-            db.ref('menuSchedule').off();
-            db.ref('menuAds').off();
-            db.ref('admins').off();
-            
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.style.display = 'none');
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.getElementById('logout-container').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
-        }
+        if(confirm('確定登出？')) { location.reload(); }
     }
 
     function applyPermissions() {
-        const navDishes = document.getElementById('nav-dishes');
-        const navSchedule = document.getElementById('nav-schedule');
-        const navAds = document.getElementById('nav-ads');
-        const navAdmins = document.getElementById('nav-admins');
-        const btnAddAdmin = document.getElementById('btn-add-admin');
-        
-        navDishes.style.display = currentUser.permissions.includes('dishes') || currentUser.role === 'superadmin' ? 'block' : 'none';
-        navSchedule.style.display = currentUser.permissions.includes('schedule') || currentUser.role === 'superadmin' ? 'block' : 'none';
-        navAds.style.display = currentUser.permissions.includes('ads') || currentUser.role === 'superadmin' ? 'block' : 'none';
-        navAdmins.style.display = 'block';
-        
-        if (btnAddAdmin) {
-            btnAddAdmin.style.display = currentUser.role === 'superadmin' ? 'block' : 'none';
-        }
-        
+        document.getElementById('nav-dishes').style.display = 'block';
+        document.getElementById('nav-schedule').style.display = 'block';
+        document.getElementById('nav-ads').style.display = 'block';
+        document.getElementById('nav-admins').style.display = 'block';
         document.getElementById('logout-container').style.display = 'block';
-        
-        if (navDishes.style.display === 'block') switchTab('dishes', navDishes);
-        else if (navSchedule.style.display === 'block') switchTab('schedule', navSchedule);
-        else if (navAds.style.display === 'block') switchTab('ads', navAds);
-        else switchTab('admins', navAdmins);
+        switchTab('dishes', document.getElementById('nav-dishes'));
     }
 
-    // 💡 2. 背景即時同步並更新本地快取
     function startLiveSync() {
-        db.ref('menuSets').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (Array.isArray(val)) {
-                globalSets = val;
-                localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
-                if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
-            }
-        });
+        db.ref('/').on('value', (snapshot) => {
+            if(!currentUser) return;
+            const data = snapshot.val() || {};
+            globalSets = data.menuSets || [];
+            globalDishes = data.menuDishes || [];
+            globalSchedule = data.menuSchedule || {};
+            globalAds = data.menuAds || globalAds;
 
-        db.ref('menuDishes').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (Array.isArray(val)) {
-                globalDishes = val;
-                localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
-                if(document.getElementById('tab-dishes').classList.contains('active')) renderData();
-                if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
+            const activeTab = document.querySelector('.tab-content.active');
+            if(activeTab) {
+                if(activeTab.id === 'tab-dishes') renderData();
+                if(activeTab.id === 'tab-schedule') loadScheduleUI();
+                if(activeTab.id === 'tab-ads') renderAds();
             }
         });
+    }
 
-        db.ref('menuSchedule').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (val) {
-                globalSchedule = val;
-                localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
-                if(document.getElementById('tab-schedule').classList.contains('active')) loadScheduleUI();
-            }
-        });
-
-        db.ref('menuAds').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (Array.isArray(val)) {
-                globalAds = val;
-                if(document.getElementById('tab-ads').classList.contains('active')) renderAds();
-            }
-        });
-
-        db.ref('admins').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (Array.isArray(val)) {
-                globalAdmins = val;
-                if(document.getElementById('tab-admins').classList.contains('active')) renderAdmins();
-            }
-        });
+    function syncToFirebase() {
+        db.ref('menuSets').set(globalSets);
+        db.ref('menuDishes').set(globalDishes);
+        db.ref('menuSchedule').set(globalSchedule);
+        db.ref('menuAds').set(globalAds);
     }
 
     function switchTab(tabId, btnElement) {
@@ -519,30 +305,13 @@
         if(tabId === 'dishes') renderData();
         if(tabId === 'schedule') loadScheduleUI();
         if(tabId === 'ads') renderAds();
-        if(tabId === 'admins') renderAdmins();
     }
 
     function renderAds() {
         const tbody = document.getElementById('ad-list');
         tbody.innerHTML = '';
         globalAds.forEach((ad, index) => {
-            let mediaPreview = '<span style="color:#888;">(純文字廣告)</span>';
-            if (ad.media) {
-                if (ad.type === 'video') {
-                    mediaPreview = `<video src="${ad.media}" class="dish-thumbnail" muted></video>`;
-                } else {
-                    mediaPreview = `<img src="${ad.media}" class="dish-thumbnail">`;
-                }
-            }
-            tbody.innerHTML += `
-                <tr>
-                    <td style="font-weight:bold;">版位 #${index + 1}</td>
-                    <td>${mediaPreview}</td>
-                    <td>${ad.title}</td>
-                    <td style="color:#666; font-size:13px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${ad.desc}</td>
-                    <td><button class="btn btn-edit" onclick="openAdModal(${index})">編輯</button></td>
-                </tr>
-            `;
+            tbody.innerHTML += `<tr><td>版位 #${index+1}</td><td>${ad.title}</td><td>${ad.desc}</td><td><button class="btn btn-edit" onclick="openAdModal(${index})">編輯</button></td></tr>`;
         });
     }
 
@@ -551,359 +320,69 @@
         const ad = globalAds[index] || {};
         document.getElementById('ad-title').value = ad.title || '';
         document.getElementById('ad-desc').value = ad.desc || '';
-        document.getElementById('ad-media-base64').value = ad.media || '';
-        document.getElementById('ad-media-type').value = ad.type || '';
-
-        const imgPrev = document.getElementById('ad-img-preview');
-        const vidPrev = document.getElementById('ad-video-preview');
-        const txtPrev = document.getElementById('ad-upload-text');
-
-        imgPrev.style.display = 'none';
-        vidPrev.style.display = 'none';
-        txtPrev.style.display = 'block';
-
-        if (ad.media) {
-            txtPrev.style.display = 'none';
-            if (ad.type === 'video') {
-                vidPrev.src = ad.media;
-                vidPrev.style.display = 'block';
-            } else {
-                imgPrev.src = ad.media;
-                imgPrev.style.display = 'block';
-            }
-        }
         document.getElementById('modal-ad').classList.add('active');
-    }
-
-    function handleAdMediaUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const isVideo = file.type.startsWith('video');
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Str = e.target.result;
-                document.getElementById('ad-media-base64').value = base64Str;
-                document.getElementById('ad-media-type').value = isVideo ? 'video' : 'image';
-
-                const imgPrev = document.getElementById('ad-img-preview');
-                const vidPrev = document.getElementById('ad-video-preview');
-                const txtPrev = document.getElementById('ad-upload-text');
-
-                txtPrev.style.display = 'none';
-                imgPrev.style.display = 'none';
-                vidPrev.style.display = 'none';
-
-                if (isVideo) {
-                    vidPrev.src = base64Str;
-                    vidPrev.style.display = 'block';
-                } else {
-                    imgPrev.src = base64Str;
-                    imgPrev.style.display = 'block';
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    function clearAdMedia() {
-        document.getElementById('ad-media-base64').value = '';
-        document.getElementById('ad-media-type').value = '';
-        document.getElementById('ad-img-preview').style.display = 'none';
-        document.getElementById('ad-video-preview').style.display = 'none';
-        document.getElementById('ad-upload-text').style.display = 'block';
-        document.getElementById('ad-media-upload').value = '';
     }
 
     function saveAd() {
         const index = parseInt(document.getElementById('ad-index').value);
-        const title = document.getElementById('ad-title').value.trim();
-        const desc = document.getElementById('ad-desc').value.trim();
-        const media = document.getElementById('ad-media-base64').value;
-        const type = document.getElementById('ad-media-type').value;
-
-        if (!title) return alert('請填寫標題');
-        globalAds[index] = { title, desc, media, type };
-        db.ref('menuAds').set(globalAds);
+        globalAds[index].title = document.getElementById('ad-title').value.trim();
+        globalAds[index].desc = document.getElementById('ad-desc').value.trim();
+        syncToFirebase();
         closeModal('modal-ad');
-        alert('廣告內容已更新！');
-    }
-
-    function renderAdmins() {
-        const tbody = document.getElementById('admin-list');
-        tbody.innerHTML = '';
-        globalAdmins.forEach(a => {
-            const permsText = [];
-            if(a.permissions.includes('dishes') || a.role === 'superadmin') permsText.push('MENU 菜單');
-            if(a.permissions.includes('schedule') || a.role === 'superadmin') permsText.push('排程設定');
-            if(a.permissions.includes('ads') || a.role === 'superadmin') permsText.push('廣告管理');
-            if(a.role === 'superadmin') permsText.push('最高權限');
-            
-            const isSelf = currentUser.id === a.id;
-            const isSuper = currentUser.role === 'superadmin';
-            const displayPass = (isSuper || isSelf) ? a.password : '********';
-            
-            let btnHtml = '';
-            if (isSuper) {
-                if (a.role === 'superadmin') {
-                    btnHtml = `<button class="btn btn-edit" onclick="openSuperadminModal('${a.id}')">修改帳密</button><span style="color:#e74c3c; font-size:12px; font-weight:bold; display:block; margin-top:5px;">不可刪除</span>`;
-                } else {
-                    btnHtml = `<button class="btn btn-edit" onclick="openAdminModal('${a.id}')">修改</button><button class="btn btn-delete" onclick="deleteAdmin('${a.id}')">刪除</button>`;
-                }
-            } else {
-                if (isSelf) btnHtml = `<button class="btn btn-edit" onclick="openSelfEditModal('${a.id}')">修改個人帳密</button>`;
-                else btnHtml = `<span style="color:#999; font-size:12px;">無權限操作</span>`;
-            }
-
-            tbody.innerHTML += `<tr><td style="font-weight:bold;">${a.username}</td><td>${displayPass}</td><td>${permsText.join('、')}</td><td>${btnHtml}</td></tr>`;
-        });
-    }
-
-    function openSuperadminModal(id) {
-        document.getElementById('edit-admin-id').value = id;
-        document.getElementById('admin-username').disabled = false;
-        const adm = globalAdmins.find(a => a.id === id);
-        if (adm) {
-            document.getElementById('admin-username').value = adm.username;
-            document.getElementById('admin-password').value = adm.password;
-        }
-        document.getElementById('admin-permissions-group').style.display = 'none';
-        document.getElementById('admin-modal-title').innerText = '修改最高權限';
-        document.getElementById('modal-admin').classList.add('active');
-    }
-
-    function openSelfEditModal(id) {
-        document.getElementById('edit-admin-id').value = id;
-        document.getElementById('admin-username').disabled = false;
-        const adm = globalAdmins.find(a => a.id === id);
-        if (adm) {
-            document.getElementById('admin-username').value = adm.username;
-            document.getElementById('admin-password').value = adm.password;
-        }
-        document.getElementById('admin-permissions-group').style.display = 'none';
-        document.getElementById('admin-modal-title').innerText = '修改個人帳密';
-        document.getElementById('modal-admin').classList.add('active');
-    }
-
-    function openAdminModal(editId = null) {
-        document.getElementById('edit-admin-id').value = '';
-        document.getElementById('admin-username').value = '';
-        document.getElementById('admin-username').disabled = false;
-        document.getElementById('admin-password').value = '';
-        document.querySelectorAll('.admin-perm-chk').forEach(c => c.checked = false);
-        document.getElementById('admin-permissions-group').style.display = 'block';
-
-        if (editId) {
-            document.getElementById('admin-modal-title').innerText = '修改管理者';
-            const adm = globalAdmins.find(a => a.id === editId);
-            if (adm) {
-                document.getElementById('edit-admin-id').value = adm.id;
-                document.getElementById('admin-username').value = adm.username;
-                document.getElementById('admin-password').value = adm.password;
-                document.querySelectorAll('.admin-perm-chk').forEach(c => {
-                    if(adm.permissions && adm.permissions.includes(c.value)) c.checked = true;
-                });
-            }
-        } else {
-            document.getElementById('admin-modal-title').innerText = '新增管理者';
-        }
-        document.getElementById('modal-admin').classList.add('active');
-    }
-
-    function saveAdmin() {
-        const id = document.getElementById('edit-admin-id').value;
-        const user = document.getElementById('admin-username').value.trim();
-        const pass = document.getElementById('admin-password').value.trim();
-        const perms = Array.from(document.querySelectorAll('.admin-perm-chk:checked')).map(el => el.value);
-        
-        if(!user || !pass) return alert('請完整填寫帳號及密碼！');
-        
-        if (id) {
-            const index = globalAdmins.findIndex(a => a.id === id);
-            if(index !== -1) {
-                if(globalAdmins.find(a => a.username === user && a.id !== id)) return alert('此帳號名稱已存在，請更換！');
-                globalAdmins[index].username = user;
-                globalAdmins[index].password = pass;
-                if (globalAdmins[index].role !== 'superadmin') globalAdmins[index].permissions = perms;
-                
-                if (currentUser.id === id) {
-                    currentUser.username = user;
-                    currentUser.password = pass;
-                    if(currentUser.role !== 'superadmin') currentUser.permissions = perms;
-                    document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
-                    localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
-                    applyPermissions();
-                }
-            }
-        } else {
-            if (globalAdmins.find(a => a.username === user)) return alert('此帳號名稱已存在，請更換！');
-            globalAdmins.push({ id: 'admin_' + Date.now(), username: user, password: pass, role: 'admin', permissions: perms });
-        }
-        db.ref('admins').set(globalAdmins);
-        closeModal('modal-admin');
-    }
-
-    function deleteAdmin(id) {
-        if(confirm('確定要刪除此管理者帳號嗎？')) {
-            globalAdmins = globalAdmins.filter(a => a.id !== id);
-            db.ref('admins').set(globalAdmins);
-        }
+        alert('廣告已更新');
     }
 
     function renderData() { renderSetBadges(); renderDishes(); }
     function renderSetBadges() {
         const container = document.getElementById('display-set-badges');
-        container.innerHTML = '';
-        if (!globalSets || globalSets.length === 0) container.innerHTML = '<span style="color:#999;">目前無任何套餐。</span>';
-        else globalSets.forEach(s => container.innerHTML += `<span class="badge">${s.name} <span>主${s.maxMains||1} 配${s.maxSides||1}</span></span>`);
+        container.innerHTML = globalSets.length === 0 ? '<span style="color:#999;">目前無套餐</span>' : globalSets.map(s => `<span class="badge">${s.name} <span>主${s.maxMains}配${s.maxSides}</span></span>`).join('');
     }
-    function openSetModal() { resetSetForm(); renderSetModalList(); document.getElementById('modal-sets').classList.add('active'); }
+
+    function openSetModal() { renderSetModalList(); document.getElementById('modal-sets').classList.add('active'); }
     function renderSetModalList() {
         const tbody = document.getElementById('set-list-modal');
-        tbody.innerHTML = '';
-        if (!globalSets) return;
-        globalSets.forEach(s => tbody.innerHTML += `<tr><td style="font-weight:bold;">${s.name}</td><td>主: ${s.maxMains||1} / 配: ${s.maxSides||1}</td><td><button class="btn btn-edit" onclick="editSet('${s.id}')">修改</button><button class="btn btn-delete" onclick="deleteSet('${s.id}')">刪除</button></td></tr>`);
-    }
-    function resetSetForm() {
-        document.getElementById('set-form-title').innerText = '新增套餐';
-        document.getElementById('edit-set-id').value = '';
-        document.getElementById('new-set-name').value = '';
-        document.getElementById('new-set-mains').value = '1';
-        document.getElementById('new-set-sides').value = '1';
-        document.getElementById('btn-cancel-set').style.display = 'none';
-        document.getElementById('btn-save-set').innerText = '新增';
-    }
-    function editSet(id) {
-        const s = globalSets.find(x => x.id === id);
-        if(!s) return;
-        document.getElementById('set-form-title').innerText = '修改套餐';
-        document.getElementById('edit-set-id').value = s.id;
-        document.getElementById('new-set-name').value = s.name;
-        document.getElementById('new-set-mains').value = s.maxMains || 1;
-        document.getElementById('new-set-sides').value = s.maxSides || 1;
-        document.getElementById('btn-cancel-set').style.display = 'block';
-        document.getElementById('btn-save-set').innerText = '更新';
+        tbody.innerHTML = globalSets.map(s => `<tr><td>${s.name}</td><td>主:${s.maxMains}/配:${s.maxSides}</td><td><button class="btn btn-delete" onclick="deleteSet('${s.id}')">刪除</button></td></tr>`).join('');
     }
     function saveSet() {
-        const id = document.getElementById('edit-set-id').value;
         const name = document.getElementById('new-set-name').value.trim();
         const mains = parseInt(document.getElementById('new-set-mains').value) || 1;
         const sides = parseInt(document.getElementById('new-set-sides').value) || 1;
-        if(!name) return alert('請輸入套餐名稱');
-        if (id) {
-            const idx = globalSets.findIndex(x => x.id === id);
-            if(idx !== -1) globalSets[idx] = { id, name, maxMains: mains, maxSides: sides };
-        } else {
-            globalSets.push({ id: 'set_' + Date.now(), name, maxMains: mains, maxSides: sides });
-        }
-        db.ref('menuSets').set(globalSets);
-        localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
-        resetSetForm(); renderSetModalList(); renderData();
+        if(!name) return alert('請輸入名稱');
+        globalSets.push({ id: 'set_' + Date.now(), name, maxMains: mains, maxSides: sides });
+        syncToFirebase(); renderSetModalList(); renderData();
     }
     function deleteSet(id) {
-        if(confirm('確定刪除此套餐？')) {
+        if(confirm('確定刪除？')) {
             globalSets = globalSets.filter(s => s.id !== id);
-            globalDishes.forEach(d => { if(d.sets) d.sets = d.sets.filter(x => x !== id); });
-            db.ref('menuSets').set(globalSets);
-            db.ref('menuDishes').set(globalDishes);
-            localStorage.setItem('localAdminSets', JSON.stringify(globalSets));
-            localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
-            renderSetModalList(); renderData();
+            syncToFirebase(); renderSetModalList(); renderData();
         }
     }
 
     function renderDishes() {
         const tbody = document.getElementById('dish-list');
-        tbody.innerHTML = '';
-        if(!globalDishes || globalDishes.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">目前無任何菜色。</td></tr>'; return; }
-        globalDishes.forEach(dish => {
-            const setNames = (dish.sets || []).map(id => { const s = globalSets.find(x => x.id === id); return s ? s.name : '未知'; }).join('、');
-            const imgSrc = dish.image || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="%23eee"/><text x="10" y="30" fill="%23aaa" font-size="12">無圖</text></svg>';
-            tbody.innerHTML += `<tr><td><img src="${imgSrc}" class="dish-thumbnail"></td><td style="font-weight:bold;">${dish.name}</td><td>${dish.type === 'main' ? '主菜' : '配菜'}</td><td>${setNames}</td><td><button class="btn btn-edit" onclick="openDishModal('${dish.id}')">修改</button><button class="btn btn-delete" onclick="deleteDish('${dish.id}')">刪除</button></td></tr>`;
-        });
+        tbody.innerHTML = globalDishes.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:#999;">目前無菜色</td></tr>' : globalDishes.map(d => `<tr><td><img src="${d.image||''}" class="dish-thumbnail"></td><td><b>${d.name}</b></td><td>${d.type==='main'?'主菜':'配菜'}</td><td>-</td><td><button class="btn btn-delete" onclick="deleteDish('${d.id}')">刪除</button></td></tr>`).join('');
     }
 
-    function handleImageUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('dish-img-preview').src = e.target.result;
-                document.getElementById('dish-img-preview').style.display = 'block';
-                document.getElementById('img-upload-text').style.display = 'none';
-                document.getElementById('dish-img-base64').value = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
+    function openDishModal() { document.getElementById('modal-dish').classList.add('active'); }
+    function handleImageUpload(e) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            document.getElementById('dish-img-preview').src = evt.target.result;
+            document.getElementById('dish-img-preview').style.display = 'block';
+            document.getElementById('dish-img-base64').value = evt.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
     }
-
-    function openDishModal(editId = null) {
-        const setContainer = document.getElementById('dish-set-checkboxes');
-        setContainer.innerHTML = '';
-        globalSets.forEach(s => setContainer.innerHTML += `<label class="checkbox-item"><input type="checkbox" class="dish-set-chk" value="${s.id}"> ${s.name}</label>`);
-        
-        document.getElementById('dish-id').value = '';
-        document.getElementById('dish-name').value = '';
-        document.getElementById('dish-type').value = 'main';
-        document.getElementById('dish-img-base64').value = '';
-        document.getElementById('dish-img-preview').style.display = 'none';
-        document.getElementById('img-upload-text').style.display = 'block';
-
-        if (editId) {
-            document.getElementById('dish-modal-title').innerText = '修改菜色';
-            const d = globalDishes.find(x => x.id === editId);
-            if(d) {
-                document.getElementById('dish-id').value = d.id;
-                document.getElementById('dish-name').value = d.name;
-                document.getElementById('dish-type').value = d.type;
-                document.querySelectorAll('.dish-set-chk').forEach(c => { if((d.sets||[]).includes(c.value)) c.checked = true; });
-                if(d.image) {
-                    document.getElementById('dish-img-base64').value = d.image;
-                    document.getElementById('dish-img-preview').src = d.image;
-                    document.getElementById('dish-img-preview').style.display = 'block';
-                    document.getElementById('img-upload-text').style.display = 'none';
-                }
-            }
-        } else {
-            document.getElementById('dish-modal-title').innerText = '新增菜色';
-        }
-        document.getElementById('modal-dish').classList.add('active');
-    }
-
     function saveDish() {
-        const id = document.getElementById('dish-id').value;
         const name = document.getElementById('dish-name').value.trim();
         const type = document.getElementById('dish-type').value;
         const image = document.getElementById('dish-img-base64').value;
-        const sets = Array.from(document.querySelectorAll('.dish-set-chk:checked')).map(el => el.value);
-
-        if(!name) return alert('請填寫菜色名稱');
-        if(globalSets.length > 0 && sets.length === 0) return alert('請至少配合一個套餐');
-
-        if(id) {
-            const idx = globalDishes.findIndex(x => x.id === id);
-            if(idx !== -1) globalDishes[idx] = { id, name, type, sets, image };
-        } else {
-            globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets, image });
-        }
-        db.ref('menuDishes').set(globalDishes);
-        localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
-        closeModal('modal-dish');
-        renderData();
+        if(!name) return alert('請填寫名稱');
+        globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets: globalSets.map(s=>s.id), image });
+        syncToFirebase(); closeModal('modal-dish'); renderData();
     }
-
     function deleteDish(id) {
-        if(confirm('確定刪除此菜色？')) {
-            globalDishes = globalDishes.filter(x => x.id !== id);
-            for(let day in globalSchedule) {
-                if(globalSchedule[day].mains) globalSchedule[day].mains = globalSchedule[day].mains.filter(x => x !== id);
-                if(globalSchedule[day].sides) globalSchedule[day].sides = globalSchedule[day].sides.filter(x => x !== id);
-            }
-            db.ref('menuDishes').set(globalDishes);
-            db.ref('menuSchedule').set(globalSchedule);
-            localStorage.setItem('localAdminDishes', JSON.stringify(globalDishes));
-            localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
-            renderData();
-        }
+        if(confirm('確定刪除？')) { globalDishes = globalDishes.filter(d => d.id !== id); syncToFirebase(); renderData(); }
     }
 
     function loadScheduleUI() {
@@ -913,9 +392,7 @@
         const mc = document.getElementById('schedule-mains');
         const sc = document.getElementById('schedule-sides');
         mc.innerHTML = ''; sc.innerHTML = '';
-
         if(globalDishes.length === 0) { mc.innerHTML = '<p style="color:#999;">請先新增菜色</p>'; return; }
-
         globalDishes.forEach(d => {
             const html = `<label class="checkbox-item"><input type="checkbox" class="${d.type}-chk" value="${d.id}" ${(d.type==='main'?mains:sides).includes(d.id)?'checked':''}> ${d.name}</label>`;
             if(d.type === 'main') mc.innerHTML += html; else sc.innerHTML += html;
@@ -928,9 +405,7 @@
             mains: Array.from(document.querySelectorAll('.main-chk:checked')).map(el => el.value),
             sides: Array.from(document.querySelectorAll('.side-chk:checked')).map(el => el.value)
         };
-        db.ref('menuSchedule').set(globalSchedule);
-        localStorage.setItem('localAdminSchedule', JSON.stringify(globalSchedule));
-        alert('排程儲存成功！');
+        syncToFirebase(); alert('排程儲存成功！');
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
