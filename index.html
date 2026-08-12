@@ -346,6 +346,16 @@
             white-space: nowrap;
         }
         .btn-back-edit:hover { background-color: #5a6268; }
+
+        .carousel-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #f8f9fa;
+    overflow: hidden;
+    touch-action: pan-y; /* 讓手機滑動時不會卡住上下捲動 */
+    cursor: grab; /* 電腦版滑鼠點擊時呈現可拖曳手勢 */
+}
     </style>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
