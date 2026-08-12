@@ -29,6 +29,7 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
+        /* 全螢幕霧化載入遮罩 */
         #loading-mask {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -62,7 +63,7 @@
             letter-spacing: 1px;
         }
 
-        /* 💡 廣告彈出視窗：比例控制在 4:3 範圍內，自適應視窗 */
+        /* 彈出式廣告/公告輪播視窗樣式 */
         #ad-modal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -77,7 +78,7 @@
         .ad-dialog {
             background: #fff;
             width: 100%;
-            max-width: 360px; /* 限制最大寬度以維持精緻度 */
+            max-width: 400px;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
@@ -90,12 +91,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 💡 嚴格控制 4:3 比例的輪播外框容器 (寬度對應高度 4:3) */
         .carousel-container {
             position: relative;
             width: 100%;
-            aspect-ratio: 4 / 3; /* 強制 4:3 比例 */
-            background: #f8f9fa;
+            height: 340px;
+            background: #f0f0f0;
             overflow: hidden;
         }
         .carousel-slide {
@@ -115,25 +115,25 @@
         
         .slide-media {
             width: 100%;
-            height: 55%; /* 佔版面比例的一半以上 */
+            height: 180px;
             object-fit: cover;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             background: #e0e0e0;
         }
-        .slide-title { font-size: 17px; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
-        .slide-desc { font-size: 13px; color: #666; line-height: 1.4; overflow-y: auto; max-height: 45px; }
+        .slide-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 6px; }
+        .slide-desc { font-size: 13px; color: #666; line-height: 1.4; max-height: 60px; overflow-y: auto; }
 
         .carousel-dots {
             display: flex;
             justify-content: center;
             gap: 8px;
-            padding: 10px 0;
+            padding: 12px 0 5px 0;
             background: #fff;
         }
         .dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #ddd;
             cursor: pointer;
@@ -141,8 +141,8 @@
         }
         .dot.active {
             background: var(--primary-color);
-            width: 20px;
-            border-radius: 4px;
+            width: 22px;
+            border-radius: 5px;
         }
 
         .ad-footer {
@@ -155,8 +155,8 @@
             color: white;
             border: none;
             width: 100%;
-            padding: 12px;
-            font-size: 16px;
+            padding: 14px;
+            font-size: 18px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
@@ -346,16 +346,6 @@
             white-space: nowrap;
         }
         .btn-back-edit:hover { background-color: #5a6268; }
-
-        .carousel-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    background: #f8f9fa;
-    overflow: hidden;
-    touch-action: pan-y; /* 讓手機滑動時不會卡住上下捲動 */
-    cursor: grab; /* 電腦版滑鼠點擊時呈現可拖曳手勢 */
-}
     </style>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -363,16 +353,23 @@
 </head>
 <body>
 
+<!-- 霧化載入中遮罩 -->
 <div id="loading-mask">
     <div class="spinner"></div>
     <div class="loading-text">載入點餐系統中...</div>
 </div>
 
-<!-- ================= 彈出式廣告/公告輪播視窗 ================= -->
+<!-- ================= 彈出式廣告/公告輪播視窗 (動態生成) ================= -->
 <div id="ad-modal">
     <div class="ad-dialog">
-        <div class="carousel-container" id="carousel-slides"></div>
-        <div class="carousel-dots" id="carousel-dots"></div>
+        <div class="carousel-container" id="carousel-slides">
+            <!-- 透過 JS 從 Firebase 動態載入 5 個廣告版位 -->
+        </div>
+
+        <div class="carousel-dots" id="carousel-dots">
+            <!-- 透過 JS 動態產生對應的圓點 -->
+        </div>
+
         <div class="ad-footer">
             <button class="btn-start-order" onclick="closeAdModal()">開始點餐</button>
         </div>
@@ -416,7 +413,7 @@
 </div>
 
 <script>
-   const firebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyDesbvIev29k7hWhS0rHs7YX9lBQzGSnJM",
       authDomain: "foodplatform-bf5c4.firebaseapp.com",
       databaseURL: "https://foodplatform-bf5c4-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -440,100 +437,24 @@
     let currentViewingSetId = null; 
     let currentStep = 'menu';
 
+    // 輪播控制變數
     let slideIndex = 0;
     let slideTimer = null;
 
-    // 觸控滑動專用變數
-    let touchStartX = 0;
-    let touchEndX = 0;
-
-    const defaultAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
-        { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
-        { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
-        { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
-        { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
-    ];
-
-    // 💡 1. 頁面一載入：優先讀取本機暫存廣告，確保 0 延遲秒開
-    let cachedAds = localStorage.getItem('localMenuAds');
-    if (cachedAds) {
-        try {
-            globalAds = JSON.parse(cachedAds);
-        } catch(e) {
-            globalAds = defaultAds;
-        }
-    } else {
-        globalAds = defaultAds;
-    }
-    
-    document.addEventListener("DOMContentLoaded", () => {
-        renderAdsCarousel();
-        startTimer();
-        initSwipeGesture();
-        
-        // 💡 保險機制：頁面結構長好後，強制在 0.5 秒內把載入遮罩拿掉，絕對不允許卡死！
-        setTimeout(() => {
-            hideLoadingMask();
-        }, 500);
-    });
-
-    // 💡 2. 背景與 Firebase 保持即時同步
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         globalSets = data.menuSets || [];
         globalDishes = data.menuDishes || [];
         globalSchedule = data.menuSchedule || {};
+        globalAds = data.menuAds || [
+            { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
+            { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
+            { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
+            { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
+            { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
+        ];
         
-        if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
-            globalAds = data.menuAds;
-            localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
-        } else {
-            db.ref('menuAds').set(defaultAds);
-            globalAds = defaultAds;
-        }
-        
-        renderAdsCarousel();
-
-        if (currentStep === 'menu') {
-            initAppUI();
-        }
-
-        // 資料抓回來後，平滑關閉載入遮罩
-        hideLoadingMask();
-    });
-
-    // 獨立的關閉遮罩函式 (確保不會重複呼叫出錯)
-    function hideLoadingMask() {
-        const mask = document.getElementById('loading-mask');
-        if (mask && mask.style.display !== 'none') {
-            mask.style.opacity = '0';
-            setTimeout(() => {
-                mask.style.display = 'none';
-            }, 300);
-        }
-    }
-    
-    document.addEventListener("DOMContentLoaded", () => {
-        renderAdsCarousel();
-        startTimer();
-        initSwipeGesture(); // 啟動滑動手勢監聽
-    });
-
-    db.ref('/').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        globalSets = data.menuSets || [];
-        globalDishes = data.menuDishes || [];
-        globalSchedule = data.menuSchedule || {};
-        
-        if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
-            globalAds = data.menuAds;
-            localStorage.setItem('localMenuAds', JSON.stringify(globalAds));
-        } else {
-            db.ref('menuAds').set(defaultAds);
-            globalAds = defaultAds;
-        }
-        
+        // 渲染動態廣告輪播
         renderAdsCarousel();
 
         if (currentStep === 'menu') {
@@ -547,21 +468,19 @@
         }
     });
 
+    // 💡 動態產生前台廣告輪播 HTML
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
-        if (!slidesContainer || !dotsContainer) return;
-        
         slidesContainer.innerHTML = '';
         dotsContainer.innerHTML = '';
-
-        if (!globalAds || globalAds.length === 0) return;
 
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
             
+            // 媒體呈現 (圖片或影片)
             let mediaHtml = '';
-            if (ad.media && ad.media.trim() !== '') {
+            if (ad.media) {
                 if (ad.type === 'video') {
                     mediaHtml = `<video src="${ad.media}" class="slide-media" autoplay muted loop playsinline></video>`;
                 } else {
@@ -572,8 +491,8 @@
             slidesContainer.innerHTML += `
                 <div class="carousel-slide ${isActive}">
                     ${mediaHtml}
-                    <div class="slide-title" ${!ad.media ? 'style="font-size:20px; margin-top:20px;"' : ''}>${ad.title || ''}</div>
-                    <div class="slide-desc" ${!ad.media ? 'style="font-size:15px; max-height:140px;"' : ''}>${ad.desc || ''}</div>
+                    <div class="slide-title">${ad.title || ''}</div>
+                    <div class="slide-desc">${ad.desc || ''}</div>
                 </div>
             `;
 
@@ -581,6 +500,7 @@
         });
     }
 
+    // --- 廣告輪播控制邏輯 ---
     function showSlides(n) {
         let slides = document.querySelectorAll('.carousel-slide');
         let dots = document.querySelectorAll('.dot');
@@ -598,17 +518,8 @@
 
     function nextSlide() {
         let slides = document.querySelectorAll('.carousel-slide');
-        if (slides.length === 0) return;
         slideIndex++;
         if (slideIndex >= slides.length) slideIndex = 0;
-        showSlides(slideIndex);
-    }
-
-    function prevSlide() {
-        let slides = document.querySelectorAll('.carousel-slide');
-        if (slides.length === 0) return;
-        slideIndex--;
-        if (slideIndex < 0) slideIndex = slides.length - 1;
         showSlides(slideIndex);
     }
 
@@ -620,7 +531,7 @@
 
     function startTimer() {
         if (slideTimer) clearInterval(slideTimer);
-        slideTimer = setInterval(nextSlide, 7000);
+        slideTimer = setInterval(nextSlide, 7000); // 7秒切換一次
     }
 
     function resetTimer() {
@@ -628,60 +539,8 @@
         startTimer();
     }
 
-    // 💡 3. 初始化手機左右滑動手勢 (Swipe Gesture)
-    // 💡 升級版：完美支援手機觸控與滑鼠拖曳的左右滑動手勢
-    function initSwipeGesture() {
-        const sliderContainer = document.getElementById('carousel-slides');
-        if (!sliderContainer) return;
-
-        let isDragging = false;
-
-        // 手機觸控開始
-        sliderContainer.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            isDragging = true;
-        }, { passive: true });
-
-        // 手機觸控結束
-        sliderContainer.addEventListener('touchend', (e) => {
-            if (!isDragging) return;
-            touchEndX = e.changedTouches[0].clientX;
-            handleSwipe();
-            isDragging = false;
-        }, { passive: true });
-
-        // 額外支援電腦滑鼠拖曳（方便您在電腦上測試滑動）
-        sliderContainer.addEventListener('mousedown', (e) => {
-            touchStartX = e.clientX;
-            isDragging = true;
-        });
-
-        sliderContainer.addEventListener('mouseup', (e) => {
-            if (!isDragging) return;
-            touchEndX = e.clientX;
-            handleSwipe();
-            isDragging = false;
-        });
-    }
-
-    function handleSwipe() {
-        const threshold = 40; // 降低觸發門檻（40px 即可滑動切換，手感更靈敏）
-        const diff = touchEndX - touchStartX;
-
-        if (diff < -threshold) {
-            // 往左滑 ➔ 下一張
-            nextSlide();
-            resetTimer();
-        } else if (diff > threshold) {
-            // 往右滑 ➔ 上一張
-            prevSlide();
-            resetTimer();
-        }
-    }
-
     function closeAdModal() {
-        const modal = document.getElementById('ad-modal');
-        if (modal) modal.style.display = 'none';
+        document.getElementById('ad-modal').style.display = 'none';
         clearInterval(slideTimer); 
     }
 
@@ -689,6 +548,8 @@
         startTimer();
     };
 
+
+    // --- 原有點餐邏輯 ---
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
         if (!currentViewingSetId) {
@@ -931,7 +792,6 @@
         selectedMains = [];
         selectedSides = [];
         initAppUI();
-    
     }
 </script>
 </body>
