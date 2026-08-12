@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一家知煮 - 管理後台（全新架構）</title>
+    <title>一家知煮 - 管理後台</title>
     <style>
         :root { --primary: #00B900; --bg: #f4f7f6; --text: #333; --border: #ddd; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); margin: 0; display: flex; color: var(--text); }
@@ -66,10 +66,10 @@
 <div id="login-screen">
     <div class="login-box">
         <h2 style="color: var(--primary); margin-top:0;">後台登入系統</h2>
-        <div class="form-group"><label>管理員帳號</label><input type="text" id="login-username" class="form-control" placeholder="請輸入帳號"></div>
-        <div class="form-group"><label>登入密碼</label><input type="password" id="login-password" class="form-control" placeholder="請輸入密碼"></div>
+        <div class="form-group"><label>管理員帳號</label><input type="text" id="login-username" class="form-control" value="admin"></div>
+        <div class="form-group"><label>登入密碼</label><input type="password" id="login-password" class="form-control" value="123"></div>
         <button class="btn btn-save" style="margin-top: 10px;" onclick="handleLogin()">登入</button>
-        <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; display: none;">帳號或密碼錯誤，請重試！</div>
+        <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; display: none;">連線中或帳號錯誤...</div>
     </div>
 </div>
 
@@ -225,13 +225,19 @@
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
-        if (!user || !pass) return alert('請輸入帳號密碼');
+        
+        const errDiv = document.getElementById('login-error');
+        errDiv.style.display = 'block';
+        errDiv.style.color = '#e67e22';
+        errDiv.innerText = "正在連線雲端驗證...";
 
         db.ref('/').once('value', (snapshot) => {
             const data = snapshot.val() || {};
-            globalAdmins = data.admins || [{ id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] }];
             
-            if (!data.admins) db.ref('admins').set(globalAdmins);
+            globalAdmins = data.admins || [{ id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] }];
+            if (!data.admins) {
+                db.ref('admins').set(globalAdmins);
+            }
 
             const foundUser = globalAdmins.find(a => a.username === user && a.password === pass);
             if (foundUser) {
@@ -253,8 +259,12 @@
                 applyPermissions();
                 startLiveSync();
             } else {
-                alert('帳號或密碼錯誤！');
+                errDiv.style.color = 'red';
+                errDiv.innerText = "帳號或密碼錯誤，請重試！";
             }
+        }, (error) => {
+            errDiv.style.color = 'red';
+            errDiv.innerText = "連線失敗：請檢查 Firebase 規則設定！";
         });
     }
 

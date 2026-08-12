@@ -446,6 +446,21 @@
     });
 
     function initSeparateSync() {
+        let isReadyCalled = false;
+
+        function safeUnlock() {
+            if (!isReadyCalled) {
+                isReadyCalled = true;
+                if (currentStep === 'menu') {
+                    initAppUI();
+                }
+                hideLoadingMask();
+            }
+        }
+
+        // 💡 2秒安全超時機制：即便雲端剛建立完全空白，也絕不卡住回圈
+        setTimeout(safeUnlock, 2000);
+
         db.ref('menuSets').on('value', (snapshot) => {
             globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
             checkReady();
@@ -477,10 +492,13 @@
     function checkReady() {
         loadedModules++;
         if (loadedModules >= 4) {
-            if (currentStep === 'menu') {
-                initAppUI();
+            const mask = document.getElementById('loading-mask');
+            if (mask && mask.style.display !== 'none') {
+                if (currentStep === 'menu') {
+                    initAppUI();
+                }
+                hideLoadingMask();
             }
-            hideLoadingMask();
         }
     }
 
