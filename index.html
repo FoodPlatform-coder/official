@@ -464,17 +464,19 @@
         startTimer();
         initSwipeGesture();
         
-        // 💡 【雙重保險】強制解鎖：就算 Firebase 連線較慢，最多等待 1.5 秒強制移除載入遮罩！
+        // 保險機制：最多 1.5 秒強制移除載入遮罩
         setTimeout(() => {
             hideLoadingMask();
         }, 1500);
     });
 
-    // 💡 2. 背景持續與 Firebase 保持即時同步
+    // 💡 2. 背景持續與 Firebase 保持即時同步 (加入安全防呆)
     db.ref('/').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        globalSets = data.menuSets || [];
-        globalDishes = data.menuDishes || [];
+        
+        // 安全賦值，防止抓到 undefined 導致畫面崩潰
+        globalSets = Array.isArray(data.menuSets) ? data.menuSets : [];
+        globalDishes = Array.isArray(data.menuDishes) ? data.menuDishes : [];
         globalSchedule = data.menuSchedule || {};
         
         if (data.menuAds && Array.isArray(data.menuAds) && data.menuAds.length > 0) {
@@ -487,15 +489,14 @@
         
         renderAdsCarousel();
 
+        // 確保 DOM 讀取完畢後才初始化介面
         if (currentStep === 'menu') {
             initAppUI();
         }
 
-        // 資料順利抓回，安全移除遮罩
         hideLoadingMask();
     });
 
-    // 💡 獨立的關閉遮罩函式（防止重複呼叫出錯）
     function hideLoadingMask() {
         const mask = document.getElementById('loading-mask');
         if (mask && mask.style.display !== 'none') {
@@ -643,12 +644,14 @@
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
+        if (!setSelect) return;
+        
         if (!currentViewingSetId) {
             currentViewingSetId = setSelect.value;
         }
 
         setSelect.innerHTML = '';
-        if (globalSets.length === 0) {
+        if (!globalSets || globalSets.length === 0) {
             setSelect.innerHTML = '<option value="">目前無任何套餐供應</option>';
         } else {
             globalSets.forEach(s => {
@@ -668,7 +671,10 @@
     }
 
     function changeSetUI() {
-        const setId = document.getElementById('set-select').value;
+        const setSelect = document.getElementById('set-select');
+        if (!setSelect || !setSelect.value) return;
+        
+        const setId = setSelect.value;
         currentViewingSetId = setId;
         
         const today = new Date().getDay(); 
@@ -676,8 +682,10 @@
         currentRules.maxMains = parseInt(currentSet.maxMains) || 1;
         currentRules.maxSides = parseInt(currentSet.maxSides) || 1;
 
-        document.getElementById('main-subtitle').innerText = `請選擇 ${currentRules.maxMains} 項`;
-        document.getElementById('side-subtitle').innerText = `請選擇 ${currentRules.maxSides} 項`;
+        const mainSub = document.getElementById('main-subtitle');
+        const sideSub = document.getElementById('side-subtitle');
+        if (mainSub) mainSub.innerText = `請選擇 ${currentRules.maxMains} 項`;
+        if (sideSub) sideSub.innerText = `請選擇 ${currentRules.maxSides} 項`;
 
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
@@ -702,9 +710,10 @@
 
     function renderCategory(containerId, itemIds, allDishes, categoryType) {
         const container = document.getElementById(containerId);
+        if (!container) return;
         container.innerHTML = '';
 
-        if (itemIds.length === 0) {
+        if (!itemIds || itemIds.length === 0) {
             container.innerHTML = `<div class="empty-msg">此套餐今日尚未安排${categoryType === 'main' ? '主菜' : '配菜'}</div>`;
             return;
         }
@@ -736,6 +745,7 @@
         const maxLimit = category === 'main' ? currentRules.maxMains : currentRules.maxSides;
         let selectedArr = category === 'main' ? selectedMains : selectedSides;
         const card = document.getElementById(clickedId);
+        if (!card) return;
         
         const index = selectedArr.indexOf(clickedId);
         
@@ -758,6 +768,7 @@
 
     function checkButtonState() {
         const btn = document.getElementById('submit-order-btn');
+        if (!btn) return;
         if (selectedMains.length === currentRules.maxMains && selectedSides.length === currentRules.maxSides) {
             btn.innerText = '確認菜單';
             btn.classList.add('ready');
