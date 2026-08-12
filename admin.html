@@ -347,33 +347,15 @@
     let globalDishes = [];
     let globalSchedule = {};
     let globalAdmins = [];
-    let globalAds = [];
+    let globalAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
+        { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
+        { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
+        { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
+        { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
+    ];
     let currentUser = null;
 
-    // 💡 閒置逾時設定 (毫秒)：這裡設定為 30 分鐘 (30 * 60 * 1000)
-    const IDLE_TIMEOUT = 30 * 60 * 1000; 
-    let idleTimer = null;
-
-    // 💡 頁面一載入時，先檢查瀏覽器是否有「已登入」的快取，實現重新整理不登出！
-    document.addEventListener("DOMContentLoaded", () => {
-        const savedUser = localStorage.getItem('localAdminUser');
-        if (savedUser) {
-            try {
-                currentUser = JSON.parse(savedUser);
-                // 瞬間隱藏登入遮罩，直接進入後台，達到 0 秒秒開！
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
-                applyPermissions();
-                startLiveSync();
-                initIdleTimer(); // 啟動閒置計時
-            } catch(e) {
-                localStorage.removeItem('localAdminUser');
-            }
-        }
-    });
-
-    // 💡 優化後的登入函式 (加入讀取動畫與快取)
-    // 💡 優化後的閃電登入函式 (只抓取 admins 節點，1秒內秒開)
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
@@ -384,89 +366,50 @@
             return;
         }
 
-        const loginBtn = document.querySelector('#login-screen .btn-save');
-        loginBtn.innerText = "驗證中...";
-        loginBtn.disabled = true;
-
-        // 💡 關鍵優化：只抓取 admins 節點，不用再下載整個資料庫！
-        db.ref('admins').once('value', (snapshot) => {
-            const adminsData = snapshot.val();
+        db.ref('/').once('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            globalAdmins = data.admins || [{ 
+                id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
+            }];
             
-            if (!adminsData) {
-                // 如果雲端完全沒有管理者，初始化預設 superadmin
-                globalAdmins = [{ 
-                    id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] 
-                }];
+            if (!data.admins) {
                 db.ref('admins').set(globalAdmins);
-            } else {
-                globalAdmins = adminsData;
             }
 
             const foundUser = globalAdmins.find(a => a.username === user && a.password === pass);
             
             if (foundUser) {
                 currentUser = foundUser;
-                localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
-                
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('login-error').style.display = 'none';
                 document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
                 
+                globalSets = data.menuSets || [];
+                globalDishes = data.menuDishes || [];
+                globalSchedule = data.menuSchedule || { 0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
+                globalAds = data.menuAds || globalAds;
+                
                 applyPermissions();
-                startLiveSync(); // 登入成功後才開始在背景抓取其他菜色與廣告資料
-                initIdleTimer();
+                startLiveSync(); 
             } else {
                 document.getElementById('login-error').innerText = "帳號或密碼錯誤，請重試！";
                 document.getElementById('login-error').style.display = 'block';
             }
-            
-            loginBtn.innerText = "登入";
-            loginBtn.disabled = false;
-        }, (error) => {
-            // 網路錯誤防護
-            alert("連線雲端失敗，請檢查網路狀態！");
-            loginBtn.innerText = "登入";
-            loginBtn.disabled = false;
         });
     }
 
-    // 💡 登出函式
     function handleLogout() {
         if(confirm('確定要登出系統嗎？')) {
             currentUser = null;
-            localStorage.removeItem('localAdminUser'); // 清除快取
-            if(idleTimer) clearTimeout(idleTimer);
             db.ref('/').off(); 
-            
             document.getElementById('login-username').value = '';
             document.getElementById('login-password').value = '';
+            
             document.querySelectorAll('.nav-btn').forEach(btn => btn.style.display = 'none');
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById('logout-container').style.display = 'none';
             document.getElementById('login-screen').style.display = 'flex';
         }
-    }
-
-    // 💡 智慧閒置計時器：只要使用者有在畫面上點擊、打字、移動滑鼠，就會自動重置計時器（持續保持登入）
-    function initIdleTimer() {
-        const resetIdleTime = () => {
-            if (!currentUser) return;
-            if (idleTimer) clearTimeout(idleTimer);
-            // 超過設定時間沒有任何互動，自動觸發登出
-            idleTimer = setTimeout(() => {
-                alert('您已長時間未操作系統，為了安全起見已自動登出。');
-                handleLogout();
-            }, IDLE_TIMEOUT);
-        };
-
-        window.onload = resetIdleTime;
-        window.onmousemove = resetIdleTime;
-        window.onmousedown = resetIdleTime;
-        window.onclick = resetIdleTime;
-        window.onkeypress = resetIdleTime;
-        window.addEventListener('scroll', resetIdleTime, true);
-        
-        resetIdleTime();
     }
 
     function applyPermissions() {
@@ -500,7 +443,7 @@
             globalSets = data.menuSets || [];
             globalDishes = data.menuDishes || [];
             globalSchedule = data.menuSchedule || { 0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
-            globalAds = data.menuAds || [];
+            globalAds = data.menuAds || globalAds;
             globalAdmins = data.admins || globalAdmins;
             
             const activeTab = document.querySelector('.tab-content.active');
@@ -559,7 +502,7 @@
 
     function openAdModal(index) {
         document.getElementById('ad-index').value = index;
-        const ad = globalAds[index] || {};
+        const ad = globalAds[index];
         
         document.getElementById('ad-title').value = ad.title || '';
         document.getElementById('ad-desc').value = ad.desc || '';
@@ -617,6 +560,7 @@
         }
     }
 
+    // 💡 清除廣告媒體檔 (轉為純文字廣告)
     function clearAdMedia() {
         document.getElementById('ad-media-base64').value = '';
         document.getElementById('ad-media-type').value = '';
@@ -634,16 +578,6 @@
         const type = document.getElementById('ad-media-type').value;
 
         if (!title) return alert('請填寫標題');
-
-        if (globalAds.length === 0) {
-            globalAds = [
-                { title: "", desc: "", media: "", type: "" },
-                { title: "", desc: "", media: "", type: "" },
-                { title: "", desc: "", media: "", type: "" },
-                { title: "", desc: "", media: "", type: "" },
-                { title: "", desc: "", media: "", type: "" }
-            ];
-        }
 
         globalAds[index] = { title, desc, media, type };
         syncToFirebase();
@@ -754,7 +688,6 @@
                     currentUser.password = pass;
                     if(currentUser.role !== 'superadmin') currentUser.permissions = perms;
                     document.getElementById('current-user-info').innerText = `登入身分: ${currentUser.username}`;
-                    localStorage.setItem('localAdminUser', JSON.stringify(currentUser));
                     applyPermissions();
                 }
             }
@@ -931,7 +864,7 @@
         globalDishes.forEach(d => {
             const html = `<label class="checkbox-item"><input type="checkbox" class="${d.type}-chk" value="${d.id}" ${(d.type==='main'?mains:sides).includes(d.id)?'checked':''}> ${d.name}</label>`;
             if(d.type === 'main') mc.innerHTML += html; else sc.innerHTML += html;
-         });
+        });
     }
 
     function saveSchedule() {
