@@ -162,7 +162,13 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }];
+    let globalAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" },
+        { title: "人氣套餐上線", desc: "精選主菜搭配新鮮時蔬。", image: "" },
+        { title: "會員限定優惠", desc: "加入官方LINE享有專屬折扣。", image: "" },
+        { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。", image: "" },
+        { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！", image: "" }
+    ];
 
     let selectedMains = [];
     let selectedSides = [];
@@ -170,9 +176,7 @@
     let currentStep = 'menu';
 
     document.addEventListener("DOMContentLoaded", () => {
-        // 💡 徹底清掉舊快取，保證每次開網頁、無論手機或電腦，都強制跟 Google 試算表同步抓取最新資料
         localStorage.removeItem('app_cache_data');
-        
         startTimer();
         loadDataFromGAS();
     });
@@ -184,14 +188,13 @@
                 globalSets = data.sets || [];
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
-                globalAds = (data.ads && data.ads.length > 0) ? data.ads : [
-                    { title: "歡迎光臨 一家知煮", desc: "美味手作料理", image: "" }
-                ];
+                if (data.ads && data.ads.length > 0) {
+                    globalAds = data.ads;
+                }
                 
                 renderAdsCarousel();
                 initAppUI();
                 
-                // 資料到齊，解除霧化與載入遮罩，彈出廣告
                 const mask = document.getElementById('loading-mask');
                 if (mask) mask.style.display = 'none';
 
