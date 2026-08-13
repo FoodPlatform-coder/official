@@ -11,10 +11,11 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
+        /* 💡 穩定且清晰的載入中遮罩，確保每次都是即時最新數據 */
         #loading-mask {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.95); z-index: 3500;
-            display: none; flex-direction: column; justify-content: center; align-items: center;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -22,7 +23,7 @@
 
         #ad-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 3000;
-            display: flex; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
+            display: none; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
         }
         .ad-dialog { 
             background: #fff; width: 100%; max-width: 380px; max-height: 85vh; 
@@ -100,7 +101,7 @@
 
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">雲端資料同步中...</div>
+    <div class="loading-text">正在讀取最新菜單與廣告...</div>
 </div>
 
 <div id="ad-modal">
@@ -153,59 +154,38 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }];
-    
-    let isDataReady = false; // 追蹤資料是否就緒
+    let globalAds = [];
 
     document.addEventListener("DOMContentLoaded", () => {
-        // 💡 1. 優先從瀏覽器快取讀取所有資料（0秒秒開）
-        const cachedData = localStorage.getItem('app_cache_data');
-        if (cachedData) {
-            try {
-                const parsed = JSON.parse(cachedData);
-                globalSets = parsed.sets || [];
-                globalDishes = parsed.dishes || [];
-                globalSchedule = parsed.schedule || {};
-                if (parsed.ads && parsed.ads.length > 0) globalAds = parsed.ads;
-                
-                renderAdsCarousel();
-                initAppUI();
-                isDataReady = true; // 標記快取可用，完全不用等
-            } catch(e) {
-                console.error("快取解析失敗", e);
-            }
-        }
-
-        if (!isDataReady) {
-            renderAdsCarousel(); // 至少先渲染廣告
-        }
-        
-        startTimer();
-
-        // 💡 2. 背景默默向 GAS 抓取最新資料並更新快取
-        fetchDataSilently();
+        // 💡 每次開網頁強制抓取最新即時資料，並由 loading-mask 遮罩控制 3-5 秒內的流暢等待
+        loadDataFromGAS();
     });
 
-    function fetchDataSilently() {
+    function loadDataFromGAS() {
         fetch(GAS_URL + "?action=getData", { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
                 globalSets = data.sets || [];
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
-                if (data.ads && data.ads.length > 0) {
-                    globalAds = data.ads;
-                    renderAdsCarousel();
-                }
-                initAppUI();
+                globalAds = (data.ads && data.ads.length > 0) ? data.ads : [
+                    { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
+                ];
                 
-                // 存入快取供下次秒開使用
-                localStorage.setItem('app_cache_data', JSON.stringify(data));
-                isDataReady = true;
+                renderAdsCarousel();
+                initAppUI();
+                startTimer();
+
+                // 資料抓完，隱藏載入遮罩，並立刻彈出最新即時的廣告視窗
+                const mask = document.getElementById('loading-mask');
+                if (mask) mask.style.display = 'none';
+
+                const adModal = document.getElementById('ad-modal');
+                if (adModal) adModal.style.display = 'flex';
             })
-            .catch(err => {
-                console.error("背景同步失敗", err);
-                isDataReady = true;
+            .catch(err => { 
+                console.error("連線失敗", err);
+                alert("連線雲端失敗，請重新整理頁面");
             });
     }
 
@@ -250,30 +230,13 @@
     function resetTimer() { clearInterval(slideTimer); startTimer(); }
 
     function closeAdModal() {
-        if (isDataReady) {
-            document.getElementById('ad-modal').style.display = 'none';
-            clearInterval(slideTimer);
-        } else {
-            // 如果背景還在抓，短暫顯示載入中
-            document.getElementById('ad-modal').style.display = 'none';
-            clearInterval(slideTimer);
-            
-            const mask = document.getElementById('loading-mask');
-            if (mask) mask.style.display = 'flex';
-
-            let checkInterval = setInterval(() => {
-                if (isDataReady) {
-                    clearInterval(checkInterval);
-                    if (mask) mask.style.display = 'none';
-                }
-            }, 100);
-        }
+        document.getElementById('ad-modal').style.display = 'none';
+        clearInterval(slideTimer);
     }
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
         if (!setSelect) return;
-        const currentVal = setSelect.value;
         setSelect.innerHTML = '';
         if (globalSets.length === 0) {
             setSelect.innerHTML = '<option value="">目前無套餐</option>';
@@ -283,8 +246,7 @@
                 opt.value = s.id; opt.textContent = s.name;
                 setSelect.appendChild(opt);
             });
-            if (currentVal) setSelect.value = currentVal;
-            else setSelect.value = globalSets[0].id;
+            setSelect.value = globalSets[0].id;
         }
         changeSetUI();
     }
