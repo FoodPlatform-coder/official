@@ -57,7 +57,6 @@
             width: 100%; height: 100%; object-fit: contain; display: block; background: #000;
         }
 
-        /* 💡 修正：只有當有文字時才佔據空間，沒文字時高度歸零、無邊距，徹底消除白塊 */
         .slide-content-box {
             padding: 0 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #fff;
             transition: padding 0.3s ease;
@@ -168,6 +167,11 @@
     let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }];
     let isDataReady = false;
 
+    let selectedMains = [];
+    let selectedSides = [];
+    let currentRules = { maxMains: 1, maxSides: 1 };
+    let currentStep = 'menu';
+
     document.addEventListener("DOMContentLoaded", () => {
         const cachedData = localStorage.getItem('app_cache_data');
         if (cachedData) {
@@ -218,7 +222,6 @@
             });
     }
 
-    // 💡 智慧版面分配：沒有文字時自動加上無文字樣式，讓 GIF 完美撐滿全螢幕
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -317,6 +320,10 @@
         document.getElementById('main-subtitle').innerText = `請選擇 ${currentRules.maxMains} 項`;
         document.getElementById('side-subtitle').innerText = `請選擇 ${currentRules.maxSides} 項`;
 
+        // 💡 關鍵修復：切換套餐時，強制清空已選項目與勾選狀態，避免跨套餐重複選單
+        selectedMains = [];
+        selectedSides = [];
+
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
 
@@ -331,7 +338,6 @@
 
         renderCategory('main-grid', filteredMains, 'main');
         renderCategory('side-grid', filteredSides, 'side');
-        selectedMains = []; selectedSides = [];
         checkButtonState();
     }
 
@@ -357,11 +363,6 @@
             `;
         });
     }
-
-    let selectedMains = [];
-    let selectedSides = [];
-    let currentRules = { maxMains: 1, maxSides: 1 };
-    let currentStep = 'menu';
 
     function selectItem(category, clickedId) {
         const maxLimit = category === 'main' ? currentRules.maxMains : currentRules.maxSides;
