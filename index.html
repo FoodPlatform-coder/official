@@ -11,7 +11,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 💡 載入中遮罩（只有在點擊開始點餐且資料未就緒時才會短暫出現） */
         #loading-mask {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.95); z-index: 3500;
@@ -101,7 +100,7 @@
 
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">正在連接試算表，請稍候...</div>
+    <div class="loading-text">雲端資料同步中...</div>
 </div>
 
 <div id="ad-modal">
@@ -154,52 +153,59 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let isDataLoaded = false; // 💡 追蹤資料是否已從試算表抓回來
-
-    let defaultAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
-    ];
-
-    let globalAds = [];
-    let selectedMains = [];
-    let selectedSides = [];
-    let currentRules = { maxMains: 1, maxSides: 1 };
-    let currentViewingSetId = null;
-    let currentStep = 'menu';
-    let slideIndex = 0;
-    let slideTimer = null;
+    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }];
+    
+    let isDataReady = false; // 追蹤資料是否就緒
 
     document.addEventListener("DOMContentLoaded", () => {
-        // 1. 瞬間載入快取廣告，廣告彈窗 0 秒秒開
-        const cachedAds = localStorage.getItem('cached_ads');
-        globalAds = cachedAds ? JSON.parse(cachedAds) : defaultAds;
+        // 💡 1. 優先從瀏覽器快取讀取所有資料（0秒秒開）
+        const cachedData = localStorage.getItem('app_cache_data');
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                globalSets = parsed.sets || [];
+                globalDishes = parsed.dishes || [];
+                globalSchedule = parsed.schedule || {};
+                if (parsed.ads && parsed.ads.length > 0) globalAds = parsed.ads;
+                
+                renderAdsCarousel();
+                initAppUI();
+                isDataReady = true; // 標記快取可用，完全不用等
+            } catch(e) {
+                console.error("快取解析失敗", e);
+            }
+        }
 
-        renderAdsCarousel();
+        if (!isDataReady) {
+            renderAdsCarousel(); // 至少先渲染廣告
+        }
+        
         startTimer();
 
-        // 2. 背景默默向試算表抓資料，不影響畫面的呈現
-        loadDataFromGAS();
+        // 💡 2. 背景默默向 GAS 抓取最新資料並更新快取
+        fetchDataSilently();
     });
 
-    function loadDataFromGAS() {
+    function fetchDataSilently() {
         fetch(GAS_URL + "?action=getData", { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
                 globalSets = data.sets || [];
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
-                
                 if (data.ads && data.ads.length > 0) {
                     globalAds = data.ads;
-                    localStorage.setItem('cached_ads', JSON.stringify(globalAds));
                     renderAdsCarousel();
                 }
                 initAppUI();
-                isDataLoaded = true; // 💡 標記資料已就緒
+                
+                // 存入快取供下次秒開使用
+                localStorage.setItem('app_cache_data', JSON.stringify(data));
+                isDataReady = true;
             })
-            .catch(err => { 
-                console.error("背景載入資料失敗", err);
-                isDataLoaded = true; // 即使失敗也解鎖，避免卡死
+            .catch(err => {
+                console.error("背景同步失敗", err);
+                isDataReady = true;
             });
     }
 
@@ -213,35 +219,13 @@
 
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
-            
-            let mediaHtml = '';
-            if (ad.image && ad.image.trim() !== '') {
-                mediaHtml = `
-                    <div class="slide-media-box">
-                        <img src="${ad.image}" class="slide-media" alt="廣告圖片">
-                    </div>
-                `;
-            }
-
+            let mediaHtml = (ad.image && ad.image.trim() !== '') ? `<div class="slide-media-box"><img src="${ad.image}" class="slide-media"></div>` : '';
             let titleHtml = (ad.title && ad.title.trim() !== '') ? `<div class="slide-title">${ad.title}</div>` : '';
             let descHtml = (ad.desc && ad.desc.trim() !== '') ? `<div class="slide-desc">${ad.desc}</div>` : '';
             
-            let contentBoxHtml = '';
-            if (titleHtml !== '' || descHtml !== '') {
-                contentBoxHtml = `
-                    <div class="slide-content-box">
-                        ${titleHtml}
-                        ${descHtml}
-                    </div>
-                `;
-            }
+            let contentBoxHtml = (titleHtml !== '' || descHtml !== '') ? `<div class="slide-content-box">${titleHtml}${descHtml}</div>` : '';
 
-            slidesContainer.innerHTML += `
-                <div class="carousel-slide">
-                    ${mediaHtml}
-                    ${contentBoxHtml}
-                </div>
-            `;
+            slidesContainer.innerHTML += `<div class="carousel-slide">${mediaHtml}${contentBoxHtml}</div>`;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
         });
     }
@@ -254,9 +238,7 @@
         if (n < 0) slideIndex = slides.length - 1;
         
         const track = document.getElementById('carousel-slides');
-        if (track) {
-            track.style.transform = `translateX(-${slideIndex * 100}%)`;
-        }
+        if (track) track.style.transform = `translateX(-${slideIndex * 100}%)`;
         
         dots.forEach(d => d.classList.remove('active'));
         if (dots[slideIndex]) dots[slideIndex].classList.add('active');
@@ -267,23 +249,20 @@
     function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 7000); }
     function resetTimer() { clearInterval(slideTimer); startTimer(); }
 
-    // 💡 當使用者點擊「開始點餐」時的邏輯
     function closeAdModal() {
-        if (isDataLoaded) {
-            // 如果資料已經抓好了，直接關閉廣告，秒進點餐畫面
+        if (isDataReady) {
             document.getElementById('ad-modal').style.display = 'none';
             clearInterval(slideTimer);
         } else {
-            // 如果資料還沒抓完，先關閉廣告，並顯示「載入中」遮罩，等資料一到立刻隱藏遮罩
+            // 如果背景還在抓，短暫顯示載入中
             document.getElementById('ad-modal').style.display = 'none';
             clearInterval(slideTimer);
             
             const mask = document.getElementById('loading-mask');
             if (mask) mask.style.display = 'flex';
 
-            // 設定一個極速輪詢檢查點，資料一回來立刻放行
             let checkInterval = setInterval(() => {
-                if (isDataLoaded) {
+                if (isDataReady) {
                     clearInterval(checkInterval);
                     if (mask) mask.style.display = 'none';
                 }
@@ -294,6 +273,7 @@
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
         if (!setSelect) return;
+        const currentVal = setSelect.value;
         setSelect.innerHTML = '';
         if (globalSets.length === 0) {
             setSelect.innerHTML = '<option value="">目前無套餐</option>';
@@ -303,7 +283,8 @@
                 opt.value = s.id; opt.textContent = s.name;
                 setSelect.appendChild(opt);
             });
-            setSelect.value = globalSets[0].id;
+            if (currentVal) setSelect.value = currentVal;
+            else setSelect.value = globalSets[0].id;
         }
         changeSetUI();
     }
