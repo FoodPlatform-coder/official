@@ -11,15 +11,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        #loading-mask {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.95); z-index: 2500;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s ease;
-        }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .loading-text { font-size: 14px; font-weight: bold; color: #555; }
-
         #ad-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 3000;
             display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
@@ -67,15 +58,15 @@
 </head>
 <body>
 
-<div id="loading-mask">
-    <div class="spinner"></div>
-    <div class="loading-text">極速載入中...</div>
-</div>
-
+<!-- 💡 廣告彈窗第一時間呈現，不需等待背景資料 -->
 <div id="ad-modal">
     <div class="ad-dialog">
-        <div class="carousel-container" id="carousel-slides"></div>
-        <div class="carousel-dots" id="carousel-dots"></div>
+        <div class="carousel-container" id="carousel-slides">
+            <div class="carousel-slide active"><div class="slide-title">歡迎光臨 一家知煮</div><div class="slide-desc">美味手作料理，天天陪伴。</div></div>
+        </div>
+        <div class="carousel-dots" id="carousel-dots">
+            <span class="dot active"></span>
+        </div>
         <div class="ad-footer">
             <button class="btn-start-order" onclick="closeAdModal()">開始點餐</button>
         </div>
@@ -130,49 +121,24 @@
     let slideTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
+        startTimer();
         loadDataFromGAS();
     });
 
     function loadDataFromGAS() {
-        fetch(GAS_URL + "?action=getData", {
-            method: "GET",
-            redirect: "follow" // 💡 強制跟隨 Google Apps Script 的重新導向
-        })
-        .then(res => {
-            if (!res.ok) throw new Error("網路回應不成功");
-            return res.json();
-        })
-        .then(data => {
-            globalSets = data.sets || [];
-            globalDishes = data.dishes || [];
-            globalSchedule = data.schedule || {};
-            
-            renderAdsCarousel();
-            initAppUI();
-            
-            const mask = document.getElementById('loading-mask');
-            if (mask) mask.style.display = 'none';
-        })
-        .catch(err => {
-            console.warn("初次連線延遲，正在嘗試背景重新載入...", err);
-            // 💡 容錯機制：如果失敗，自動再試一次，避免直接彈窗中斷
-            setTimeout(() => {
-                fetch(GAS_URL + "?action=getData", { redirect: "follow" })
-                .then(res => res.json())
-                .then(data => {
-                    globalSets = data.sets || [];
-                    globalDishes = data.dishes || [];
-                    globalSchedule = data.schedule || {};
+        fetch(GAS_URL + "?action=getData", { redirect: "follow" })
+            .then(res => res.json())
+            .then(data => {
+                globalSets = data.sets || [];
+                globalDishes = data.dishes || [];
+                globalSchedule = data.schedule || {};
+                if (data.ads && data.ads.length > 0) {
+                    globalAds = data.ads;
                     renderAdsCarousel();
-                    initAppUI();
-                    const mask = document.getElementById('loading-mask');
-                    if (mask) mask.style.display = 'none';
-                })
-                .catch(e => {
-                    alert("無法連線至雲端試算表，請檢查 GAS 部署權限是否為「任何人」！");
-                });
-            }, 1000);
-        });
+                }
+                initAppUI();
+            })
+            .catch(err => { console.error("背景載入資料失敗", err); });
     }
 
     function renderAdsCarousel() {
@@ -185,7 +151,6 @@
             slidesContainer.innerHTML += `<div class="carousel-slide ${isActive}"><div class="slide-title">${ad.title || ''}</div><div class="slide-desc">${ad.desc || ''}</div></div>`;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
         });
-        startTimer();
     }
 
     function showSlides(n) {

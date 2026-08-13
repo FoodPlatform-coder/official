@@ -70,6 +70,7 @@
     <h2>一家知煮 後台<br><small style="font-size:12px; color:#4cd137;">● 試算表連線中</small></h2>
     <button id="nav-dishes" class="nav-btn" onclick="switchTab('dishes', this)">🍽️ MENU 菜單總庫房</button>
     <button id="nav-schedule" class="nav-btn" onclick="switchTab('schedule', this)">📅 每日排程設定</button>
+    <button id="nav-ads" class="nav-btn" onclick="switchTab('ads', this)">📢 廣告輪播管理</button>
     <div id="logout-container">
         <div style="font-size:12px; color:#ccc; margin-bottom:5px;">身分: admin</div>
         <button class="btn btn-danger" onclick="handleLogout()">登出</button>
@@ -108,6 +109,14 @@
             <div id="schedule-sides" class="checkbox-group"></div>
         </div>
         <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程至試算表</button>
+    </div>
+
+    <div id="tab-ads" class="tab-content card">
+        <h3>廣告輪播管理 (共 5 個版位)</h3>
+        <table>
+            <thead><tr><th>版位</th><th>標題</th><th>內容</th><th style="width: 100px;">操作</th></tr></thead>
+            <tbody id="ad-list"></tbody>
+        </table>
     </div>
 </div>
 
@@ -149,12 +158,30 @@
     </div>
 </div>
 
+<div class="modal" id="modal-ad">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('modal-ad')">&times;</button>
+        <h3>編輯廣告版位</h3>
+        <input type="hidden" id="ad-index">
+        <div class="form-group"><label>標題</label><input type="text" id="ad-title" class="form-control"></div>
+        <div class="form-group"><label>內容</label><textarea id="ad-desc" class="form-control" rows="3"></textarea></div>
+        <button class="btn btn-save" onclick="saveAd()">儲存廣告</button>
+    </div>
+</div>
+
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxXdHYPW2KB4osShMrfHibXAUmOuxJQkjI4Wx_ksGZWqP7rMlqZ3rVkRtAgxEeA1k8lPg/exec";
 
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
+    let globalAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。" },
+        { title: "人氣套餐上線", desc: "精選主菜搭配新鮮時蔬。" },
+        { title: "會員限定優惠", desc: "加入官方LINE享有專屬折扣。" },
+        { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。" },
+        { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！" }
+    ];
 
     document.addEventListener("DOMContentLoaded", () => {
         if (localStorage.getItem('isLoggedIn') === 'true') {
@@ -179,12 +206,13 @@
         document.getElementById('sidebar-nav').style.display = 'block';
         document.getElementById('main-content').style.display = 'block';
         
-        fetch(GAS_URL + "?action=getData")
+        fetch(GAS_URL + "?action=getData", { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
                 globalSets = data.sets || [];
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
+                if (data.ads && data.ads.length > 0) globalAds = data.ads;
                 switchTab('dishes', document.getElementById('nav-dishes'));
             });
     }
@@ -199,16 +227,13 @@
             type: 'saveAll',
             sets: globalSets,
             dishes: globalDishes,
-            schedule: globalSchedule
+            schedule: globalSchedule,
+            ads: globalAds
         };
         fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify(payload)
-        }).then(res => res.json()).then(res => {
-            console.log("同步成功", res);
-        }).catch(err => {
-            console.error("同步失敗", err);
-        });
+        }).then(res => res.json()).catch(err => console.error("同步失敗", err));
     }
 
     function switchTab(tabId, btn) {
@@ -218,6 +243,33 @@
         if (btn) btn.classList.add('active');
         if (tabId === 'dishes') renderData();
         if (tabId === 'schedule') loadScheduleUI();
+        if (tabId === 'ads') renderAds();
+    }
+
+    function renderAds() {
+        const tbody = document.getElementById('ad-list');
+        tbody.innerHTML = '';
+        globalAds.forEach((ad, index) => {
+            tbody.innerHTML += `<tr><td>版位 #${index+1}</td><td>${ad.title}</td><td>${ad.desc}</td><td><button class="btn btn-edit" onclick="openAdModal(${index})">編輯</button></td></tr>`;
+        });
+    }
+
+    function openAdModal(index) {
+        document.getElementById('ad-index').value = index;
+        const ad = globalAds[index] || {};
+        document.getElementById('ad-title').value = ad.title || '';
+        document.getElementById('ad-desc').value = ad.desc || '';
+        document.getElementById('modal-ad').classList.add('active');
+    }
+
+    function saveAd() {
+        const index = parseInt(document.getElementById('ad-index').value);
+        globalAds[index].title = document.getElementById('ad-title').value.trim();
+        globalAds[index].desc = document.getElementById('ad-desc').value.trim();
+        syncToGAS();
+        closeModal('modal-ad');
+        renderAds();
+        alert('廣告已更新並同步至試算表');
     }
 
     function renderData() { renderSetBadges(); renderDishes(); }
@@ -350,6 +402,7 @@
     function saveSchedule() {
         const day = document.getElementById('day-select').value;
         globalSchedule[day] = {
+            mains: Array.from(document.querySelectorAll('.main-ctrl:checked'), el => el.value), // handled below
             mains: Array.from(document.querySelectorAll('.main-chk:checked')).map(el => el.value),
             sides: Array.from(document.querySelectorAll('.side-chk:checked')).map(el => el.value)
         };
