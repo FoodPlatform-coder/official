@@ -13,11 +13,29 @@
         
         .sidebar { width: 250px; background: #2c3e50; color: white; min-height: 100vh; padding-top: 20px; position: relative; display: none; }
         .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 22px; }
+        
+        /* 💡 導覽按鈕支援反灰與禁用狀態 */
         .nav-btn { display: block; width: 100%; padding: 15px 20px; color: white; background: none; border: none; text-align: left; font-size: 16px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
         .nav-btn:hover, .nav-btn.active { background: #1a252f; border-left: 4px solid var(--primary); }
+        .nav-btn.disabled { color: #888 !important; cursor: not-allowed; pointer-events: none; background: transparent !important; border-left: 4px solid transparent !important; }
         
         #logout-container { position: absolute; bottom: 20px; width: 100%; padding: 0 20px; box-sizing: border-box; }
-        .content { flex: 1; padding: 30px; overflow-y: auto; display: none; }
+        
+        .content { flex: 1; padding: 30px; overflow-y: auto; display: none; position: relative; }
+        
+        /* 💡 右側主內容區塊的霧化與互動鎖定 */
+        .content-card-wrapper { transition: filter 0.3s ease; }
+        .content-card-wrapper.blurred { filter: blur(5px); pointer-events: none; user-select: none; }
+
+        /* 💡 載入中覆蓋提示 */
+        #admin-loading-mask {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.7); z-index: 100;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -67,10 +85,11 @@
 </div>
 
 <div class="sidebar" id="sidebar-nav">
-    <h2>一家知煮 後台<br><small style="font-size:12px; color:#4cd137;">● 試算表連線中</small></h2>
-    <button id="nav-dishes" class="nav-btn" onclick="switchTab('dishes', this)">🍽️ MENU 菜單總庫房</button>
-    <button id="nav-schedule" class="nav-btn" onclick="switchTab('schedule', this)">📅 每日排程設定</button>
-    <button id="nav-ads" class="nav-btn" onclick="switchTab('ads', this)">📢 廣告輪播管理</button>
+    <h2>一家知煮 後台<br><small style="font-size:12px; color:#4cd137;" id="sync-status">● 正在同步雲端...</small></h2>
+    <!-- 💡 導覽按鈕預設加上 disabled 類別，等待資料抓完才解開 -->
+    <button id="nav-dishes" class="nav-btn disabled" onclick="switchTab('dishes', this)">🍽️ MENU 菜單總庫房</button>
+    <button id="nav-schedule" class="nav-btn disabled" onclick="switchTab('schedule', this)">📅 每日排程設定</button>
+    <button id="nav-ads" class="nav-btn disabled" onclick="switchTab('ads', this)">📢 廣告輪播管理</button>
     <div id="logout-container">
         <div style="font-size:12px; color:#ccc; margin-bottom:5px;">身分: admin</div>
         <button class="btn btn-danger" onclick="handleLogout()">登出</button>
@@ -78,45 +97,53 @@
 </div>
 
 <div class="content" id="main-content">
-    <div id="tab-dishes" class="tab-content card">
-        <div class="top-controls">
-            <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="openSetModal()">📋 套餐管理</button>
-            <button class="btn btn-primary" onclick="openDishModal()">＋ 新增菜色</button>
-        </div>
-        <div class="set-badges">
-            <span style="font-weight: bold; margin-right: 5px; line-height: 28px;">現有套餐：</span>
-            <div id="display-set-badges" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-        </div>
-        <table>
-            <thead><tr><th>圖片</th><th>名稱</th><th>類別</th><th>所屬套餐</th><th style="width: 150px;">操作</th></tr></thead>
-            <tbody id="dish-list"></tbody>
-        </table>
+    <!-- 💡 載入中遮罩與霧化包覆層 -->
+    <div id="admin-loading-mask">
+        <div class="spinner"></div>
+        <div style="font-size: 14px; font-weight: bold; color: #555;">正在與 Google 試算表同步資料...</div>
     </div>
 
-    <div id="tab-schedule" class="tab-content card">
-        <h3>設定每日供應菜色</h3>
-        <div class="form-group" style="max-width: 200px;">
-            <label>選擇星期：</label>
-            <select class="form-control" id="day-select" onchange="loadScheduleUI()">
-                <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
-                <option value="4">星期四</option><option value="5">星期五</option><option value="6">星期六</option><option value="0">星期日</option>
-            </select>
+    <div class="content-card-wrapper blurred" id="content-wrapper">
+        <div id="tab-dishes" class="tab-content card">
+            <div class="top-controls">
+                <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="openSetModal()">📋 套餐管理</button>
+                <button class="btn btn-primary" onclick="openDishModal()">＋ 新增菜色</button>
+            </div>
+            <div class="set-badges">
+                <span style="font-weight: bold; margin-right: 5px; line-height: 28px;">現有套餐：</span>
+                <div id="display-set-badges" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            </div>
+            <table>
+                <thead><tr><th>圖片</th><th>名稱</th><th>類別</th><th>所屬套餐</th><th style="width: 150px;">操作</th></tr></thead>
+                <tbody id="dish-list"></tbody>
+            </table>
         </div>
-        <div style="margin-top: 20px;">
-            <h4>勾選該日提供的主菜</h4>
-            <div id="schedule-mains" class="checkbox-group"></div>
-            <h4 style="margin-top:20px;">勾選該日提供的配菜</h4>
-            <div id="schedule-sides" class="checkbox-group"></div>
-        </div>
-        <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程至試算表</button>
-    </div>
 
-    <div id="tab-ads" class="tab-content card">
-        <h3>廣告輪播管理 (共 5 個版位)</h3>
-        <table>
-            <thead><tr><th>圖片預覽</th><th>標題</th><th>內容</th><th style="width: 100px;">操作</th></tr></thead>
-            <tbody id="ad-list"></tbody>
-        </table>
+        <div id="tab-schedule" class="tab-content card">
+            <h3>設定每日供應菜色</h3>
+            <div class="form-group" style="max-width: 200px;">
+                <label>選擇星期：</label>
+                <select class="form-control" id="day-select" onchange="loadScheduleUI()">
+                    <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+                    <option value="4">星期四</option><option value="5">星期五</option><option value="6">星期六</option><option value="0">星期日</option>
+                </select>
+            </div>
+            <div style="margin-top: 20px;">
+                <h4>勾選該日提供的主菜</h4>
+                <div id="schedule-mains" class="checkbox-group"></div>
+                <h4 style="margin-top:20px;">勾選該日提供的配菜</h4>
+                <div id="schedule-sides" class="checkbox-group"></div>
+            </div>
+            <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程至試算表</button>
+        </div>
+
+        <div id="tab-ads" class="tab-content card">
+            <h3>廣告輪播管理 (共 5 個版位)</h3>
+            <table>
+                <thead><tr><th>圖片預覽</th><th>標題</th><th>內容</th><th style="width: 100px;">操作</th></tr></thead>
+                <tbody id="ad-list"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -215,6 +242,11 @@
         document.getElementById('sidebar-nav').style.display = 'block';
         document.getElementById('main-content').style.display = 'block';
         
+        // 💡 載入中：顯示遮罩、右側霧化、左側按鈕反灰
+        document.getElementById('admin-loading-mask').style.display = 'flex';
+        document.getElementById('content-wrapper').classList.add('blurred');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.add('disabled'));
+
         fetch(GAS_URL + "?action=getData", { redirect: "follow" })
             .then(res => res.json())
             .then(data => {
@@ -222,7 +254,18 @@
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
                 if (data.ads && data.ads.length > 0) globalAds = data.ads;
+
+                // 💡 載入完成：隱藏遮罩、解除右側霧化、左側按鈕恢復彩色並可點擊
+                document.getElementById('admin-loading-mask').style.display = 'none';
+                document.getElementById('content-wrapper').classList.remove('blurred');
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('disabled'));
+                document.getElementById('sync-status').innerText = "● 試算表連線中";
+
                 switchTab('dishes', document.getElementById('nav-dishes'));
+            })
+            .catch(err => {
+                console.error("同步失敗", err);
+                document.getElementById('admin-loading-mask').innerHTML = '<div style="color:red; font-weight:bold;">雲端連線失敗，請重新整理頁面</div>';
             });
     }
 
@@ -299,7 +342,6 @@
         alert('廣告已更新並同步至試算表');
     }
 
-    // 💡 支援 GIF 動態圖與圖片上傳處理
     function handleImageUpload(e, previewId, base64InputId, textId) {
         const file = e.target.files[0];
         if (!file) return;
