@@ -32,7 +32,6 @@
             display: flex; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
         }
         
-        /* 💡 廣告彈窗維持固定大小與優雅外觀 */
         .ad-dialog { 
             background: #fff; width: 100%; max-width: 360px; 
             border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
@@ -52,15 +51,17 @@
             box-sizing: border-box; background: #fff;
         }
 
-        /* 💡 固定的圖片/GIF 尺寸比例 (佔據視窗上半部黃金比例) */
+        /* 💡 圖片/GIF 彈性高度：有文字時適中，無文字時自動延展擴大佔滿視覺區塊 */
         .slide-media-box {
-            width: 100%; height: 260px; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            width: 100%; max-height: 320px; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+        .slide-media-box.full-size {
+            max-height: 380px; /* 純圖時允許更大高度 */
         }
         .slide-media {
-            width: 100%; height: 100%; object-fit: contain; display: block; background: #000;
+            width: 100%; height: auto; max-height: 380px; object-fit: contain; display: block; background: #000;
         }
 
-        /* 💡 只有當有文字時才顯示內容區塊，高度自適應且絕不擠壓圖片 */
         .slide-content-box {
             padding: 12px 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #fff;
         }
@@ -222,7 +223,7 @@
             });
     }
 
-    // 💡 智慧排版：有圖片就顯示固定高度圖片盒；有文字才渲染文字區塊，無文字則完全不佔空間
+    // 💡 完美自適應渲染：無文字時圖片自動撐滿全螢幕主視覺，絕不留白
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -234,20 +235,22 @@
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
             
+            let titleHtml = (ad.title && ad.title.trim() !== '') ? `<div class="slide-title">${ad.title}</div>` : '';
+            let descHtml = (ad.desc && ad.desc.trim() !== '') ? `<div class="slide-desc">${ad.desc}</div>` : '';
+            let hasText = (titleHtml !== '' || descHtml !== '');
+
             let mediaHtml = '';
             if (ad.image && ad.image.trim() !== '') {
+                let boxClass = hasText ? 'slide-media-box' : 'slide-media-box full-size';
                 mediaHtml = `
-                    <div class="slide-media-box">
+                    <div class="${boxClass}">
                         <img src="${ad.image}" class="slide-media" alt="廣告圖片">
                     </div>
                 `;
             }
             
-            let titleHtml = (ad.title && ad.title.trim() !== '') ? `<div class="slide-title">${ad.title}</div>` : '';
-            let descHtml = (ad.desc && ad.desc.trim() !== '') ? `<div class="slide-desc">${ad.desc}</div>` : '';
-            
             let contentBoxHtml = '';
-            if (titleHtml !== '' || descHtml !== '') {
+            if (hasText) {
                 contentBoxHtml = `
                     <div class="slide-content-box">
                         ${titleHtml}
