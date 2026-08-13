@@ -11,16 +11,14 @@
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; z-index: 2000; display: flex; justify-content: center; align-items: center; }
         .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 100%; max-width: 320px; text-align: center; }
         
-        .sidebar { width: 250px; background: #2c3e50; color: white; min-height: 100vh; padding-top: 20px; position: relative; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; min-height: 100vh; padding-top: 20px; position: relative; display: none; }
         .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 22px; }
-        .nav-btn { display: block; width: 100%; padding: 15px 20px; color: white; text-decoration: none; background: none; border: none; text-align: left; font-size: 16px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
+        .nav-btn { display: block; width: 100%; padding: 15px 20px; color: white; background: none; border: none; text-align: left; font-size: 16px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
         .nav-btn:hover, .nav-btn.active { background: #1a252f; border-left: 4px solid var(--primary); }
         
         #logout-container { position: absolute; bottom: 20px; width: 100%; padding: 0 20px; box-sizing: border-box; }
-        
-        .content { flex: 1; padding: 30px; overflow-y: auto; position: relative; }
+        .content { flex: 1; padding: 30px; overflow-y: auto; display: none; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
@@ -37,10 +35,8 @@
         .btn-danger { background: #e74c3c; width: 100%; padding: 12px; font-size: 16px; }
         
         .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        
         .set-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px dashed #ccc; }
-        .badge { background: #e3f2fd; color: #1976d2; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #bbdefb; display: flex; align-items: center; gap: 5px; }
-        .badge span { background: white; color: #1976d2; padding: 2px 6px; border-radius: 10px; font-size: 12px; }
+        .badge { background: #e3f2fd; color: #1976d2; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #bbdefb; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal.active { display: flex; }
@@ -54,12 +50,9 @@
         .checkbox-item { background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 14px; }
         
         .img-upload-preview { width: 100%; height: 150px; background: #f0f0f0; border: 2px dashed #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; overflow: hidden; cursor: pointer; position: relative; }
-        .img-upload-preview img, .img-upload-preview video { width: 100%; height: 100%; object-fit: cover; display: none; }
-        .img-upload-preview span { color: #888; pointer-events: none; }
+        .img-upload-preview img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+        .img-upload-preview span { color: #888; pointer-events: none; z-index: 2; }
     </style>
-    
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
@@ -69,40 +62,32 @@
         <div class="form-group"><label>管理員帳號</label><input type="text" id="login-username" class="form-control" value="admin"></div>
         <div class="form-group"><label>登入密碼</label><input type="password" id="login-password" class="form-control" value="123"></div>
         <button class="btn btn-save" style="margin-top: 10px;" onclick="handleLogin()">登入</button>
-        <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; display: none;">連線中或帳號錯誤...</div>
+        <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; display: none;"></div>
     </div>
 </div>
 
-<div class="sidebar">
-    <h2>一家知煮 後台<br><small style="font-size:12px; color:#4cd137;">● 雲端連線中</small></h2>
-    
-    <button id="nav-dishes" class="nav-btn" style="display:none;" onclick="switchTab('dishes', this)">🍽️ MENU 菜單</button>
-    <button id="nav-schedule" class="nav-btn" style="display:none;" onclick="switchTab('schedule', this)">📅 每日排程設定</button>
-    <button id="nav-ads" class="nav-btn" style="display:none;" onclick="switchTab('ads', this)">📢 廣告輪播管理</button>
-    <button id="nav-admins" class="nav-btn" style="display:none;" onclick="switchTab('admins', this)">👥 管理者帳號</button>
-    
-    <div id="logout-container" style="display:none;">
-        <div style="font-size:12px; color:#ccc; margin-bottom:5px;" id="current-user-info"></div>
+<div class="sidebar" id="sidebar-nav">
+    <h2>一家知煮 後台<br><small style="font-size:12px; color:#4cd137;">● 試算表連線中</small></h2>
+    <button id="nav-dishes" class="nav-btn" onclick="switchTab('dishes', this)">🍽️ MENU 菜單總庫房</button>
+    <button id="nav-schedule" class="nav-btn" onclick="switchTab('schedule', this)">📅 每日排程設定</button>
+    <div id="logout-container">
+        <div style="font-size:12px; color:#ccc; margin-bottom:5px;">身分: admin</div>
         <button class="btn btn-danger" onclick="handleLogout()">登出</button>
     </div>
 </div>
 
-<div class="content">
+<div class="content" id="main-content">
     <div id="tab-dishes" class="tab-content card">
         <div class="top-controls">
             <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="openSetModal()">📋 套餐管理</button>
             <button class="btn btn-primary" onclick="openDishModal()">＋ 新增菜色</button>
         </div>
-
         <div class="set-badges">
-            <span style="font-weight: bold; margin-right: 5px; line-height: 28px;">現有套餐類型：</span>
+            <span style="font-weight: bold; margin-right: 5px; line-height: 28px;">現有套餐：</span>
             <div id="display-set-badges" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
         </div>
-
         <table>
-            <thead>
-                <tr><th>圖片</th><th>名稱</th><th>類別</th><th>所屬套餐</th><th style="width: 130px;">操作</th></tr>
-            </thead>
+            <thead><tr><th>圖片</th><th>名稱</th><th>類別</th><th>所屬套餐</th><th style="width: 150px;">操作</th></tr></thead>
             <tbody id="dish-list"></tbody>
         </table>
     </div>
@@ -116,61 +101,30 @@
                 <option value="4">星期四</option><option value="5">星期五</option><option value="6">星期六</option><option value="0">星期日</option>
             </select>
         </div>
-        
         <div style="margin-top: 20px;">
             <h4>勾選該日提供的主菜</h4>
             <div id="schedule-mains" class="checkbox-group"></div>
-            
             <h4 style="margin-top:20px;">勾選該日提供的配菜</h4>
             <div id="schedule-sides" class="checkbox-group"></div>
         </div>
-
-        <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程</button>
-    </div>
-
-    <div id="tab-ads" class="tab-content card">
-        <h3>廣告輪播管理 (共 5 個版位)</h3>
-        <table>
-            <thead>
-                <tr><th>版位編號</th><th>標題</th><th>內容</th><th style="width: 100px;">操作</th></tr>
-            </thead>
-            <tbody id="ad-list"></tbody>
-        </table>
-    </div>
-
-    <div id="tab-admins" class="tab-content card">
-        <div class="top-controls">
-            <h3 style="margin:0;">管理者帳號系統</h3>
-            <button class="btn btn-primary" onclick="openAdminModal()">新增管理者</button>
-        </div>
-        <table>
-            <thead>
-                <tr><th>帳號</th><th>密碼</th><th>擁有權限</th><th style="width: 160px;">操作</th></tr>
-            </thead>
-            <tbody id="admin-list"></tbody>
-        </table>
+        <button class="btn btn-save" onclick="saveSchedule()">儲存當日排程至試算表</button>
     </div>
 </div>
 
-<!-- ================= MODALS ================= -->
+<!-- MODALS -->
 <div class="modal" id="modal-sets">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal('modal-sets')">&times;</button>
         <h3>套餐管理</h3>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
-            <h4 id="set-form-title" style="margin-top: 0;">新增套餐</h4>
-            <input type="hidden" id="edit-set-id">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-                <div class="form-group" style="margin-bottom: 0; flex: 2;"><label>套餐名稱</label><input type="text" id="new-set-name" class="form-control" placeholder="例: 套餐三"></div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1;"><label>主菜數</label><input type="number" id="new-set-mains" class="form-control" value="1" min="1"></div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1;"><label>配菜數</label><input type="number" id="new-set-sides" class="form-control" value="1" min="1"></div>
-                <button class="btn btn-primary" onclick="saveSet()" style="height: 40px;">儲存</button>
+                <div class="form-group" style="margin-bottom:0; flex:2;"><label>套餐名稱</label><input type="text" id="new-set-name" class="form-control" placeholder="例: 套餐A"></div>
+                <div class="form-group" style="margin-bottom:0; flex:1;"><label>主菜數</label><input type="number" id="new-set-mains" class="form-control" value="1" min="1"></div>
+                <div class="form-group" style="margin-bottom:0; flex:1;"><label>配菜數</label><input type="number" id="new-set-sides" class="form-control" value="1" min="1"></div>
+                <button class="btn btn-primary" onclick="saveSet()" style="height: 40px;">儲存套餐</button>
             </div>
         </div>
-        <table>
-            <thead><tr><th>套餐名稱</th><th>規則</th><th style="width: 130px;">操作</th></tr></thead>
-            <tbody id="set-list-modal"></tbody>
-        </table>
+        <table><thead><tr><th>名稱</th><th>規則</th><th style="width:100px;">操作</th></tr></thead><tbody id="set-list-modal"></tbody></table>
     </div>
 </div>
 
@@ -180,220 +134,204 @@
         <h3 id="dish-modal-title">新增菜色</h3>
         <input type="hidden" id="dish-id">
         <input type="hidden" id="dish-img-base64">
-        
         <div class="form-group">
-            <label>圖片上傳</label>
+            <label>圖片上傳 (自動壓縮)</label>
             <div class="img-upload-preview" onclick="document.getElementById('dish-img-upload').click()">
                 <span id="img-upload-text">點擊上傳圖片</span>
                 <img id="dish-img-preview" src="">
             </div>
             <input type="file" id="dish-img-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
         </div>
-
-        <div class="form-group"><label>菜色名稱</label><input type="text" id="dish-name" class="form-control" required></div>
+        <div class="form-group"><label>菜色名稱</label><input type="text" id="dish-name" class="form-control"></div>
         <div class="form-group"><label>類別</label><select id="dish-type" class="form-control"><option value="main">主菜</option><option value="side">配菜</option></select></div>
-        <div class="form-group"><label>配合套餐</label><div id="dish-set-checkboxes" class="checkbox-group"></div></div>
+        <div class="form-group"><label>配合套餐 (可複選)</label><div id="dish-set-checkboxes" class="checkbox-group"></div></div>
         <button class="btn btn-save" onclick="saveDish()">儲存菜色</button>
     </div>
 </div>
 
-<div class="modal" id="modal-ad">
-    <div class="modal-content">
-        <button class="modal-close" onclick="closeModal('modal-ad')">&times;</button>
-        <h3>編輯廣告版位</h3>
-        <input type="hidden" id="ad-index">
-        <div class="form-group"><label>標題</label><input type="text" id="ad-title" class="form-control"></div>
-        <div class="form-group"><label>內容</label><textarea id="ad-desc" class="form-control" rows="3"></textarea></div>
-        <button class="btn btn-save" onclick="saveAd()">儲存廣告</button>
-    </div>
-</div>
-
 <script>
-    const firebaseConfig = {
-      databaseURL: "https://fir-config-6bb21-default-rtdb.asia-southeast1.firebasedatabase.app"
-    };
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-    const db = firebase.database();
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxXdHYPW2KB4osShMrfHibXAUmOuxJQkjI4Wx_ksGZWqP7rMlqZ3rVkRtAgxEeA1k8lPg/exec";
 
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAdmins = [];
-    let globalAds = [];
-    let currentUser = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            unlockAdminUI();
+        }
+    });
 
     function handleLogin() {
         const user = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value.trim();
+        if (user === 'admin' && pass === '123') {
+            localStorage.setItem('isLoggedIn', 'true');
+            unlockAdminUI();
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+            document.getElementById('login-error').innerText = "帳號或密碼錯誤！";
+        }
+    }
+
+    function unlockAdminUI() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('sidebar-nav').style.display = 'block';
+        document.getElementById('main-content').style.display = 'block';
         
-        const errDiv = document.getElementById('login-error');
-        errDiv.style.display = 'block';
-        errDiv.style.color = '#e67e22';
-        errDiv.innerText = "正在連線雲端驗證...";
-
-        db.ref('/').once('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            
-            globalAdmins = data.admins || [{ id: 'admin_super', username: 'admin', password: '123', role: 'superadmin', permissions: ['dishes', 'schedule', 'ads', 'admins'] }];
-            if (!data.admins) {
-                db.ref('admins').set(globalAdmins);
-            }
-
-            const foundUser = globalAdmins.find(a => a.username === user && a.password === pass);
-            if (foundUser) {
-                currentUser = foundUser;
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('current-user-info').innerText = `身分: ${currentUser.username}`;
-                
-                globalSets = data.menuSets || [];
-                globalDishes = data.menuDishes || [];
-                globalSchedule = data.menuSchedule || {};
-                globalAds = data.menuAds || [
-                    { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", media: "", type: "" },
-                    { title: "人氣套餐上線", desc: "精選主菜搭配新鮮時蔬。", media: "", type: "" },
-                    { title: "會員限定優惠", desc: "加入官方LINE享有專屬折扣。", media: "", type: "" },
-                    { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。", media: "", type: "" },
-                    { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！", media: "", type: "" }
-                ];
-
-                applyPermissions();
-                startLiveSync();
-            } else {
-                errDiv.style.color = 'red';
-                errDiv.innerText = "帳號或密碼錯誤，請重試！";
-            }
-        }, (error) => {
-            errDiv.style.color = 'red';
-            errDiv.innerText = "連線失敗：請檢查 Firebase 規則設定！";
-        });
+        fetch(GAS_URL + "?action=getData")
+            .then(res => res.json())
+            .then(data => {
+                globalSets = data.sets || [];
+                globalDishes = data.dishes || [];
+                globalSchedule = data.schedule || {};
+                switchTab('dishes', document.getElementById('nav-dishes'));
+            });
     }
 
     function handleLogout() {
-        if(confirm('確定登出？')) { location.reload(); }
+        localStorage.removeItem('isLoggedIn');
+        location.reload();
     }
 
-    function applyPermissions() {
-        document.getElementById('nav-dishes').style.display = 'block';
-        document.getElementById('nav-schedule').style.display = 'block';
-        document.getElementById('nav-ads').style.display = 'block';
-        document.getElementById('nav-admins').style.display = 'block';
-        document.getElementById('logout-container').style.display = 'block';
-        switchTab('dishes', document.getElementById('nav-dishes'));
-    }
-
-    function startLiveSync() {
-        db.ref('/').on('value', (snapshot) => {
-            if(!currentUser) return;
-            const data = snapshot.val() || {};
-            globalSets = data.menuSets || [];
-            globalDishes = data.menuDishes || [];
-            globalSchedule = data.menuSchedule || {};
-            globalAds = data.menuAds || globalAds;
-
-            const activeTab = document.querySelector('.tab-content.active');
-            if(activeTab) {
-                if(activeTab.id === 'tab-dishes') renderData();
-                if(activeTab.id === 'tab-schedule') loadScheduleUI();
-                if(activeTab.id === 'tab-ads') renderAds();
-            }
+    function syncToGAS() {
+        const payload = {
+            type: 'saveAll',
+            sets: globalSets,
+            dishes: globalDishes,
+            schedule: globalSchedule
+        };
+        fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }).then(res => res.json()).then(res => {
+            console.log("同步成功", res);
+        }).catch(err => {
+            console.error("同步失敗", err);
         });
     }
 
-    function syncToFirebase() {
-        db.ref('menuSets').set(globalSets);
-        db.ref('menuDishes').set(globalDishes);
-        db.ref('menuSchedule').set(globalSchedule);
-        db.ref('menuAds').set(globalAds);
-    }
-
-    function switchTab(tabId, btnElement) {
+    function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
         document.getElementById('tab-' + tabId).classList.add('active');
-        if (btnElement) btnElement.classList.add('active');
-        
-        if(tabId === 'dishes') renderData();
-        if(tabId === 'schedule') loadScheduleUI();
-        if(tabId === 'ads') renderAds();
-    }
-
-    function renderAds() {
-        const tbody = document.getElementById('ad-list');
-        tbody.innerHTML = '';
-        globalAds.forEach((ad, index) => {
-            tbody.innerHTML += `<tr><td>版位 #${index+1}</td><td>${ad.title}</td><td>${ad.desc}</td><td><button class="btn btn-edit" onclick="openAdModal(${index})">編輯</button></td></tr>`;
-        });
-    }
-
-    function openAdModal(index) {
-        document.getElementById('ad-index').value = index;
-        const ad = globalAds[index] || {};
-        document.getElementById('ad-title').value = ad.title || '';
-        document.getElementById('ad-desc').value = ad.desc || '';
-        document.getElementById('modal-ad').classList.add('active');
-    }
-
-    function saveAd() {
-        const index = parseInt(document.getElementById('ad-index').value);
-        globalAds[index].title = document.getElementById('ad-title').value.trim();
-        globalAds[index].desc = document.getElementById('ad-desc').value.trim();
-        syncToFirebase();
-        closeModal('modal-ad');
-        alert('廣告已更新');
+        if (btn) btn.classList.add('active');
+        if (tabId === 'dishes') renderData();
+        if (tabId === 'schedule') loadScheduleUI();
     }
 
     function renderData() { renderSetBadges(); renderDishes(); }
-    function renderSetBadges() {
-        const container = document.getElementById('display-set-badges');
-        container.innerHTML = globalSets.length === 0 ? '<span style="color:#999;">目前無套餐</span>' : globalSets.map(s => `<span class="badge">${s.name} <span>主${s.maxMains}配${s.maxSides}</span></span>`).join('');
+    function renderSetBadges() { document.getElementById('display-set-badges').innerHTML = globalSets.length === 0 ? '<span style="color:#999;">目前無套餐</span>' : globalSets.map(s => `<span class="badge">${s.name} (主${s.maxMains}/配${s.maxSides})</span>`).join(''); }
+    function renderDishes() {
+        const tbody = document.getElementById('dish-list');
+        tbody.innerHTML = globalDishes.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:#999;">庫房目前無菜色</td></tr>' : globalDishes.map(d => {
+            const setNames = (d.sets || []).map(setId => { const s = globalSets.find(x => x.id === setId); return s ? s.name : ''; }).filter(Boolean).join('、');
+            return `<tr><td><img src="${d.image||''}" class="dish-thumbnail"></td><td><b>${d.name}</b></td><td>${d.type==='main'?'主菜':'配菜'}</td><td>${setNames || '未指定'}</td><td><button class="btn btn-edit" onclick="openDishModal('${d.id}')">編輯</button> <button class="btn btn-delete" onclick="deleteDish('${d.id}')">刪除</button></td></tr>`;
+        }).join('');
     }
 
-    function openSetModal() { renderSetModalList(); document.getElementById('modal-sets').classList.add('active'); }
-    function renderSetModalList() {
-        const tbody = document.getElementById('set-list-modal');
-        tbody.innerHTML = globalSets.map(s => `<tr><td>${s.name}</td><td>主:${s.maxMains}/配:${s.maxSides}</td><td><button class="btn btn-delete" onclick="deleteSet('${s.id}')">刪除</button></td></tr>`).join('');
+    function openSetModal() {
+        document.getElementById('set-list-modal').innerHTML = globalSets.map(s => `<tr><td>${s.name}</td><td>主:${s.maxMains}/配:${s.maxSides}</td><td><button class="btn btn-delete" onclick="deleteSet('${s.id}')">刪除</button></td></tr>`).join('');
+        document.getElementById('modal-sets').classList.add('active');
     }
     function saveSet() {
         const name = document.getElementById('new-set-name').value.trim();
         const mains = parseInt(document.getElementById('new-set-mains').value) || 1;
         const sides = parseInt(document.getElementById('new-set-sides').value) || 1;
-        if(!name) return alert('請輸入名稱');
+        if (!name) return alert('請輸入名稱');
         globalSets.push({ id: 'set_' + Date.now(), name, maxMains: mains, maxSides: sides });
-        syncToFirebase(); renderSetModalList(); renderData();
+        syncToGAS(); openSetModal(); renderData();
+        document.getElementById('new-set-name').value = '';
     }
-    function deleteSet(id) {
-        if(confirm('確定刪除？')) {
-            globalSets = globalSets.filter(s => s.id !== id);
-            syncToFirebase(); renderSetModalList(); renderData();
+    function deleteSet(id) { if(confirm('確定刪除此套餐？')) { globalSets = globalSets.filter(s => s.id !== id); syncToGAS(); openSetModal(); renderData(); } }
+
+    function openDishModal(editId = null) {
+        document.getElementById('dish-id').value = '';
+        document.getElementById('dish-name').value = '';
+        document.getElementById('dish-type').value = 'main';
+        document.getElementById('dish-img-base64').value = '';
+        const previewImg = document.getElementById('dish-img-preview');
+        previewImg.src = ''; previewImg.style.display = 'none';
+        document.getElementById('img-upload-text').style.display = 'block';
+        document.getElementById('dish-img-upload').value = '';
+
+        let assignedSets = [];
+        if (editId) {
+            const dish = globalDishes.find(d => d.id === editId);
+            if (dish) {
+                document.getElementById('dish-id').value = dish.id;
+                document.getElementById('dish-name').value = dish.name;
+                document.getElementById('dish-type').value = dish.type;
+                if (dish.image) {
+                    previewImg.src = dish.image;
+                    previewImg.style.display = 'block';
+                    document.getElementById('img-upload-text').style.display = 'none';
+                    document.getElementById('dish-img-base64').value = dish.image;
+                }
+                assignedSets = dish.sets || [];
+            }
         }
+
+        const setContainer = document.getElementById('dish-set-checkboxes');
+        setContainer.innerHTML = globalSets.length === 0 ? '<span style="color:#999;">請先建立套餐</span>' : globalSets.map(s => {
+            const checked = assignedSets.includes(s.id) ? 'checked' : '';
+            return `<label class="checkbox-item"><input type="checkbox" class="dish-set-chk" value="${s.id}" ${checked}> ${s.name}</label>`;
+        }).join('');
+
+        document.getElementById('modal-dish').classList.add('active');
     }
 
-    function renderDishes() {
-        const tbody = document.getElementById('dish-list');
-        tbody.innerHTML = globalDishes.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:#999;">目前無菜色</td></tr>' : globalDishes.map(d => `<tr><td><img src="${d.image||''}" class="dish-thumbnail"></td><td><b>${d.name}</b></td><td>${d.type==='main'?'主菜':'配菜'}</td><td>-</td><td><button class="btn btn-delete" onclick="deleteDish('${d.id}')">刪除</button></td></tr>`).join('');
-    }
-
-    function openDishModal() { document.getElementById('modal-dish').classList.add('active'); }
     function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = function(evt) {
-            document.getElementById('dish-img-preview').src = evt.target.result;
-            document.getElementById('dish-img-preview').style.display = 'block';
-            document.getElementById('dish-img-base64').value = evt.target.result;
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 400;
+                let width = img.width, height = img.height;
+                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                const previewImg = document.getElementById('dish-img-preview');
+                previewImg.src = compressedDataUrl;
+                previewImg.style.display = 'block';
+                document.getElementById('img-upload-text').style.display = 'none';
+                document.getElementById('dish-img-base64').value = compressedDataUrl;
+            };
+            img.src = evt.target.result;
         };
-        reader.readAsDataURL(e.target.files[0]);
+        reader.readAsDataURL(file);
     }
+
     function saveDish() {
+        const editId = document.getElementById('dish-id').value;
         const name = document.getElementById('dish-name').value.trim();
         const type = document.getElementById('dish-type').value;
         const image = document.getElementById('dish-img-base64').value;
-        if(!name) return alert('請填寫名稱');
-        globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets: globalSets.map(s=>s.id), image });
-        syncToFirebase(); closeModal('modal-dish'); renderData();
+        const sets = Array.from(document.querySelectorAll('.dish-set-chk:checked')).map(el => el.value);
+
+        if (!name) return alert('請填寫菜色名稱');
+        if (sets.length === 0) return alert('請至少勾選一個配合的套餐！');
+
+        if (editId) {
+            const index = globalDishes.findIndex(d => d.id === editId);
+            if (index > -1) {
+                globalDishes[index] = { id: editId, name, type, sets, image: image || globalDishes[index].image };
+            }
+        } else {
+            globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets, image });
+        }
+
+        syncToGAS();
+        closeModal('modal-dish');
+        renderData();
     }
-    function deleteDish(id) {
-        if(confirm('確定刪除？')) { globalDishes = globalDishes.filter(d => d.id !== id); syncToFirebase(); renderData(); }
-    }
+
+    function deleteDish(id) { if(confirm('確定刪除此菜色？')) { globalDishes = globalDishes.filter(d => d.id !== id); syncToGAS(); renderData(); } }
 
     function loadScheduleUI() {
         const day = document.getElementById('day-select').value;
@@ -402,10 +340,10 @@
         const mc = document.getElementById('schedule-mains');
         const sc = document.getElementById('schedule-sides');
         mc.innerHTML = ''; sc.innerHTML = '';
-        if(globalDishes.length === 0) { mc.innerHTML = '<p style="color:#999;">請先新增菜色</p>'; return; }
+        if (globalDishes.length === 0) { mc.innerHTML = '<p style="color:#999;">總庫房無菜色</p>'; return; }
         globalDishes.forEach(d => {
             const html = `<label class="checkbox-item"><input type="checkbox" class="${d.type}-chk" value="${d.id}" ${(d.type==='main'?mains:sides).includes(d.id)?'checked':''}> ${d.name}</label>`;
-            if(d.type === 'main') mc.innerHTML += html; else sc.innerHTML += html;
+            if (d.type === 'main') mc.innerHTML += html; else sc.innerHTML += html;
         });
     }
 
@@ -415,7 +353,7 @@
             mains: Array.from(document.querySelectorAll('.main-chk:checked')).map(el => el.value),
             sides: Array.from(document.querySelectorAll('.side-chk:checked')).map(el => el.value)
         };
-        syncToFirebase(); alert('排程儲存成功！');
+        syncToGAS(); alert('排程已成功儲存至 Google 試算表！');
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }

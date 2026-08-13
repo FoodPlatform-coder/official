@@ -5,360 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>一家知煮 - 線上點餐系統</title>
     <style>
-        :root {
-            --primary-color: #00B900;
-            --bg-color: #f8f9fa;
-            --text-color: #333;
-        }
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 0;
-            padding-bottom: 90px;
-        }
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background-color: #fff;
-            min-height: 100vh;
-            box-sizing: border-box;
-            position: relative;
-        }
-        
+        :root { --primary-color: #00B900; --bg-color: #f8f9fa; --text-color: #333; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; padding-bottom: 90px; }
+        .container { max-width: 500px; margin: 0 auto; background-color: #fff; min-height: 100vh; box-sizing: border-box; position: relative; }
         .view-section { display: none; }
         .view-section.active { display: block; }
 
         #loading-mask {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            z-index: 2500;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 0.3s ease;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95); z-index: 2500;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s ease;
         }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-text {
-            font-size: 16px;
-            font-weight: bold;
-            color: #555;
-            letter-spacing: 1px;
-        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 14px; font-weight: bold; color: #555; }
 
         #ad-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 3000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 3000;
+            display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
         }
-        .ad-dialog {
-            background: #fff;
-            width: 100%;
-            max-width: 360px;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .carousel-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            background: #f8f9fa;
-            overflow: hidden;
-            touch-action: pan-y;
-            cursor: grab;
-        }
-        .carousel-slide {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0;
-            transition: opacity 0.6s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-        }
+        .ad-dialog { background: #fff; width: 100%; max-width: 360px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        .carousel-container { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #f8f9fa; overflow: hidden; }
+        .carousel-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
         .carousel-slide.active { opacity: 1; }
-        
-        .slide-media {
-            width: 100%;
-            height: 55%;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: #e0e0e0;
-        }
         .slide-title { font-size: 17px; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
-        .slide-desc { font-size: 13px; color: #666; line-height: 1.4; overflow-y: auto; max-height: 45px; }
+        .slide-desc { font-size: 13px; color: #666; line-height: 1.4; max-height: 45px; overflow-y: auto; }
+        .carousel-dots { display: flex; justify-content: center; gap: 8px; padding: 10px 0; background: #fff; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; cursor: pointer; }
+        .dot.active { background: var(--primary-color); width: 20px; border-radius: 4px; }
+        .ad-footer { padding: 10px 20px 20px 20px; background: #fff; text-align: center; }
+        .btn-start-order { background-color: var(--primary-color); color: white; border: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
 
-        .carousel-dots {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 0;
-            background: #fff;
-        }
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ddd;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .dot.active {
-            background: var(--primary-color);
-            width: 20px;
-            border-radius: 4px;
-        }
-
-        .ad-footer {
-            padding: 10px 20px 20px 20px;
-            background: #fff;
-            text-align: center;
-        }
-        .btn-start-order {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-start-order:hover { background-color: #009900; }
-
-        .section-header {
-            padding: 15px 20px;
-            background-color: #fff;
-            border-bottom: 1px solid #eee;
-            font-weight: bold;
-            font-size: 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .set-selector {
-            padding: 15px 20px;
-            background: #fff;
-        }
-        select {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
+        .section-header { padding: 15px 20px; background-color: #fff; border-bottom: 1px solid #eee; font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .set-selector { padding: 15px 20px; background: #fff; }
+        select { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; }
         
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            padding: 15px 20px;
-            background: #f8f9fa;
-        }
-        
-        .card {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative;
-        }
-        
-        .card-img {
-            width: 100%;
-            height: 120px;
-            background-color: #ffe8d6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #d4a373;
-            font-size: 14px;
-            object-fit: cover;
-        }
-        
-        .card-title {
-            margin: 10px 0 5px 0;
-            font-weight: bold;
-            font-size: 16px;
-            color: var(--text-color);
-        }
-        
-        .add-btn {
-            width: 36px;
-            height: 36px;
-            margin: 5px auto 15px auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #fff;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            border-radius: 50%;
-            font-size: 22px;
-            font-weight: normal;
-            transition: 0.2s;
-        }
-        
-        .card.selected {
-            border: 2px solid var(--primary-color);
-            box-shadow: 0 0 10px rgba(0, 185, 0, 0.2);
-        }
-        .card.selected .add-btn {
-            background-color: var(--primary-color);
-            color: #fff;
-        }
-        
-        .empty-msg {
-            grid-column: span 2;
-            text-align: center;
-            padding: 20px;
-            color: #999;
-            font-size: 14px;
-        }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px 20px; background: #f8f9fa; }
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
+        .card-title { margin: 10px 0 5px 0; font-weight: bold; font-size: 16px; color: var(--text-color); }
+        .add-btn { width: 36px; height: 36px; margin: 5px auto 15px auto; display: flex; justify-content: center; align-items: center; background-color: #fff; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 50%; font-size: 22px; }
+        .card.selected { border: 2px solid var(--primary-color); box-shadow: 0 0 10px rgba(0, 185, 0, 0.2); }
+        .card.selected .add-btn { background-color: var(--primary-color); color: #fff; }
+        .empty-msg { grid-column: span 2; text-align: center; padding: 20px; color: #999; font-size: 14px; }
 
         .confirm-box { padding: 20px; }
-        .confirm-item-card {
-            background: #f8f9fa;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
+        .confirm-item-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .confirm-item-card h4 { margin: 0 0 12px 0; color: var(--primary-color); font-size: 16px; }
         .confirm-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 15px; }
-        .confirm-row:last-child { border-bottom: none; }
-        
-        .confirm-thumbnail {
-            width: 50px;
-            height: 50px;
-            border-radius: 6px;
-            object-fit: cover;
-            background: #eee;
-            margin-right: 10px;
-        }
+        .confirm-thumbnail { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; background: #eee; margin-right: 10px; }
         .confirm-item-info { display: flex; align-items: center; }
 
         .success-box { text-align: center; padding: 60px 20px; }
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 40px;
-            margin: 0 auto 20px auto;
-        }
+        .success-icon { width: 80px; height: 80px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 40px; margin: 0 auto 20px auto; }
 
-        .footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            max-width: 500px;
-            background: #fff;
-            padding: 15px 20px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            box-sizing: border-box;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-        }
-        
-        .submit-btn {
-            background: #ccc;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            transition: 0.3s;
-            cursor: not-allowed;
-        }
-        
-        .submit-btn.ready {
-            background: var(--primary-color);
-            cursor: pointer;
-        }
-
-        .btn-back-edit {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            display: none;
-            white-space: nowrap;
-        }
-        .btn-back-edit:hover { background-color: #5a6268; }
+        .footer { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: #fff; padding: 15px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); box-sizing: border-box; display: flex; gap: 10px; align-items: center; left: 50%; transform: translateX(-50%); z-index: 100; }
+        .submit-btn { background: #ccc; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: not-allowed; transition: 0.3s; }
+        .submit-btn.ready { background: var(--primary-color); cursor: pointer; }
+        .btn-back-edit { background-color: #6c757d; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
     </style>
-    
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">正在同步最新雲端資料...</div>
+    <div class="loading-text">極速載入中...</div>
 </div>
 
-<!-- ================= 彈出式廣告/公告輪播視窗 ================= -->
 <div id="ad-modal">
     <div class="ad-dialog">
         <div class="carousel-container" id="carousel-slides"></div>
@@ -375,18 +88,14 @@
             <label style="font-weight:bold; display:block; margin-bottom:8px;">選擇套餐：</label>
             <select id="set-select" onchange="changeSetUI()"></select>
         </div>
-
         <div class="section-header">主菜 <small id="main-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
         <div class="grid-container" id="main-grid"></div>
-
         <div class="section-header">配菜 <small id="side-subtitle" style="color:#666; font-weight:normal;">請選擇 1 項</small></div>
         <div class="grid-container" id="side-grid"></div>
     </div>
 
     <div id="view-confirm" class="view-section">
-        <div style="background-color: var(--primary-color); color: white; padding: 20px; text-align: center; font-size: 20px; font-weight: bold;">
-            訂單明細確認
-        </div>
+        <div style="background-color: var(--primary-color); color: white; padding: 20px; text-align: center; font-size: 20px; font-weight: bold;">訂單明細確認</div>
         <div class="confirm-box" id="confirm-details-content"></div>
     </div>
 
@@ -394,8 +103,8 @@
         <div class="success-box">
             <div class="success-icon">✓</div>
             <h2 style="color: #333; margin-bottom: 10px;">訂餐完成！</h2>
-            <p style="color: #666; margin-bottom: 30px;">您的餐點已成功送出，老闆正在為您準備中！</p>
-            <button class="btn btn-primary" style="background: var(--primary-color); padding: 12px 30px; font-size: 16px; border-radius: 8px; border:none; color:white; font-weight:bold;" onclick="resetOrder()">返回首頁繼續點餐</button>
+            <p style="color: #666; margin-bottom: 30px;">您的餐點已成功送出！</p>
+            <button class="btn btn-primary" style="background: var(--primary-color); padding: 12px 30px; font-size: 16px; border-radius: 8px; border:none; color:white; font-weight:bold;" onclick="resetOrder()">繼續點餐</button>
         </div>
     </div>
 
@@ -406,140 +115,55 @@
 </div>
 
 <script>
-    const firebaseConfig = {
-      databaseURL: "https://fir-config-6bb21-default-rtdb.asia-southeast1.firebasedatabase.app"
-    };
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-    const db = firebase.database();
-
-    localStorage.clear();
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxXdHYPW2KB4osShMrfHibXAUmOuxJQkjI4Wx_ksGZWqP7rMlqZ3rVkRtAgxEeA1k8lPg/exec";
 
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [];
-    
+    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。" }];
     let selectedMains = [];
     let selectedSides = [];
     let currentRules = { maxMains: 1, maxSides: 1 };
-    let currentViewingSetId = null; 
+    let currentViewingSetId = null;
     let currentStep = 'menu';
-
     let slideIndex = 0;
     let slideTimer = null;
-    let touchStartX = 0;
-    let touchEndX = 0;
-    let loadedModules = 0;
-
-    const defaultAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴您的午晚餐時光。", media: "", type: "" },
-        { title: "人氣超值套餐上線", desc: "精選主菜搭配新鮮時蔬，滿足您的挑剔味蕾。", media: "", type: "" },
-        { title: "會員限定優惠活動", desc: "加入官方LINE好友，不定時享有專屬折扣與好康。", media: "", type: "" },
-        { title: "每日新鮮食材供應", desc: "堅持嚴選優質肉品與在地蔬菜，讓您吃得安心健康。", media: "", type: "" },
-        { title: "線上快速點餐教學", desc: "輕鬆三步驟：選擇套餐 ➔ 挑選主配菜 ➔ 送出訂單！", media: "", type: "" }
-    ];
 
     document.addEventListener("DOMContentLoaded", () => {
-        startTimer();
-        initSwipeGesture();
-        initSeparateSync();
+        loadDataFromGAS();
     });
 
-    function initSeparateSync() {
-        let isReadyCalled = false;
-
-        function safeUnlock() {
-            if (!isReadyCalled) {
-                isReadyCalled = true;
-                if (currentStep === 'menu') {
-                    initAppUI();
-                }
-                hideLoadingMask();
-            }
-        }
-
-        // 💡 2秒安全超時機制：即便雲端剛建立完全空白，也絕不卡住回圈
-        setTimeout(safeUnlock, 2000);
-
-        db.ref('menuSets').on('value', (snapshot) => {
-            globalSets = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-            checkReady();
-        });
-
-        db.ref('menuDishes').on('value', (snapshot) => {
-            globalDishes = Array.isArray(snapshot.val()) ? snapshot.val() : [];
-            checkReady();
-        });
-
-        db.ref('menuSchedule').on('value', (snapshot) => {
-            globalSchedule = snapshot.val() || {};
-            checkReady();
-        });
-
-        db.ref('menuAds').on('value', (snapshot) => {
-            const adsData = snapshot.val();
-            if (Array.isArray(adsData) && adsData.length > 0) {
-                globalAds = adsData;
-            } else {
-                db.ref('menuAds').set(defaultAds);
-                globalAds = defaultAds;
-            }
-            renderAdsCarousel();
-            checkReady();
-        });
-    }
-
-    function checkReady() {
-        loadedModules++;
-        if (loadedModules >= 4) {
-            const mask = document.getElementById('loading-mask');
-            if (mask && mask.style.display !== 'none') {
-                if (currentStep === 'menu') {
-                    initAppUI();
-                }
-                hideLoadingMask();
-            }
-        }
-    }
-
-    function hideLoadingMask() {
-        const mask = document.getElementById('loading-mask');
-        if (mask && mask.style.display !== 'none') {
-            mask.style.opacity = '0';
-            setTimeout(() => { mask.style.display = 'none'; }, 300);
-        }
+    function loadDataFromGAS() {
+        fetch(GAS_URL + "?action=getData")
+            .then(res => res.json())
+            .then(data => {
+                globalSets = data.sets || [];
+                globalDishes = data.dishes || [];
+                globalSchedule = data.schedule || {};
+                
+                renderAdsCarousel();
+                initAppUI();
+                
+                const mask = document.getElementById('loading-mask');
+                if (mask) mask.style.display = 'none';
+            })
+            .catch(err => {
+                console.error("載入失敗", err);
+                alert("連線雲端失敗，請稍後再試");
+            });
     }
 
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
         if (!slidesContainer || !dotsContainer) return;
-        
-        slidesContainer.innerHTML = '';
-        dotsContainer.innerHTML = '';
-
-        if (!globalAds || globalAds.length === 0) return;
-
+        slidesContainer.innerHTML = ''; dotsContainer.innerHTML = '';
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
-            let mediaHtml = '';
-            if (ad.media && ad.media.trim() !== '') {
-                if (ad.type === 'video') {
-                    mediaHtml = `<video src="${ad.media}" class="slide-media" autoplay muted loop playsinline></video>`;
-                } else {
-                    mediaHtml = `<img src="${ad.media}" class="slide-media">`;
-                }
-            }
-
-            slidesContainer.innerHTML += `
-                <div class="carousel-slide ${isActive}">
-                    ${mediaHtml}
-                    <div class="slide-title" ${!ad.media ? 'style="font-size:20px; margin-top:20px;"' : ''}>${ad.title || ''}</div>
-                    <div class="slide-desc" ${!ad.media ? 'style="font-size:15px; max-height:140px;"' : ''}>${ad.desc || ''}</div>
-                </div>
-            `;
+            slidesContainer.innerHTML += `<div class="carousel-slide ${isActive}"><div class="slide-title">${ad.title || ''}</div><div class="slide-desc">${ad.desc || ''}</div></div>`;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
         });
+        startTimer();
     }
 
     function showSlides(n) {
@@ -548,90 +172,29 @@
         if (slides.length === 0) return;
         if (n >= slides.length) slideIndex = 0;
         if (n < 0) slideIndex = slides.length - 1;
-        slides.forEach(slide => slide.classList.remove('active'));
-        dots.forEach(dot => dot.classList.remove('active'));
+        slides.forEach(s => s.classList.remove('active'));
+        dots.forEach(d => d.classList.remove('active'));
         slides[slideIndex].classList.add('active');
         dots[slideIndex].classList.add('active');
     }
-
-    function nextSlide() {
-        let slides = document.querySelectorAll('.carousel-slide');
-        if (slides.length === 0) return;
-        slideIndex++;
-        if (slideIndex >= slides.length) slideIndex = 0;
-        showSlides(slideIndex);
-    }
-
-    function prevSlide() {
-        let slides = document.querySelectorAll('.carousel-slide');
-        if (slides.length === 0) return;
-        slideIndex--;
-        if (slideIndex < 0) slideIndex = slides.length - 1;
-        showSlides(slideIndex);
-    }
-
-    function currentSlide(n) {
-        slideIndex = n;
-        showSlides(slideIndex);
-        resetTimer();
-    }
-
-    function startTimer() {
-        if (slideTimer) clearInterval(slideTimer);
-        slideTimer = setInterval(nextSlide, 7000);
-    }
-
-    function resetTimer() {
-        clearInterval(slideTimer);
-        startTimer();
-    }
-
-    function initSwipeGesture() {
-        const sliderContainer = document.getElementById('carousel-slides');
-        if (!sliderContainer) return;
-        let isDragging = false;
-        sliderContainer.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; isDragging = true; }, { passive: true });
-        sliderContainer.addEventListener('touchend', (e) => { if (!isDragging) return; touchEndX = e.changedTouches[0].clientX; handleSwipe(); isDragging = false; }, { passive: true });
-        sliderContainer.addEventListener('mousedown', (e) => { touchStartX = e.clientX; isDragging = true; });
-        sliderContainer.addEventListener('mouseup', (e) => { if (!isDragging) return; touchEndX = e.clientX; handleSwipe(); isDragging = false; });
-    }
-
-    function handleSwipe() {
-        const threshold = 40; 
-        const diff = touchEndX - touchStartX;
-        if (diff < -threshold) { nextSlide(); resetTimer(); } 
-        else if (diff > threshold) { prevSlide(); resetTimer(); }
-    }
-
-    function closeAdModal() {
-        const modal = document.getElementById('ad-modal');
-        if (modal) modal.style.display = 'none';
-        clearInterval(slideTimer); 
-    }
-
-    window.onload = function() { startTimer(); };
+    function nextSlide() { slideIndex++; showSlides(slideIndex); }
+    function currentSlide(n) { slideIndex = n; showSlides(slideIndex); }
+    function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 6000); }
+    function closeAdModal() { document.getElementById('ad-modal').style.display = 'none'; clearInterval(slideTimer); }
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
         if (!setSelect) return;
-        if (!currentViewingSetId) { currentViewingSetId = setSelect.value; }
-
         setSelect.innerHTML = '';
-        if (!globalSets || globalSets.length === 0) {
-            setSelect.innerHTML = '<option value="">目前無任何套餐供應</option>';
+        if (globalSets.length === 0) {
+            setSelect.innerHTML = '<option value="">目前無套餐</option>';
         } else {
             globalSets.forEach(s => {
                 const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.name;
+                opt.value = s.id; opt.textContent = s.name;
                 setSelect.appendChild(opt);
             });
-            if (currentViewingSetId && globalSets.find(s => s.id === currentViewingSetId)) {
-                setSelect.value = currentViewingSetId;
-            } else {
-                setSelect.value = globalSets[0].id;
-                currentViewingSetId = globalSets[0].id;
-            }
+            setSelect.value = globalSets[0].id;
         }
         changeSetUI();
     }
@@ -639,19 +202,14 @@
     function changeSetUI() {
         const setSelect = document.getElementById('set-select');
         if (!setSelect || !setSelect.value) return;
-        
         const setId = setSelect.value;
-        currentViewingSetId = setId;
-        
-        const today = new Date().getDay(); 
+        const today = new Date().getDay();
         const currentSet = globalSets.find(s => s.id === setId) || { maxMains: 1, maxSides: 1 };
         currentRules.maxMains = parseInt(currentSet.maxMains) || 1;
         currentRules.maxSides = parseInt(currentSet.maxSides) || 1;
 
-        const mainSub = document.getElementById('main-subtitle');
-        const sideSub = document.getElementById('side-subtitle');
-        if (mainSub) mainSub.innerText = `請選擇 ${currentRules.maxMains} 項`;
-        if (sideSub) sideSub.innerText = `請選擇 ${currentRules.maxSides} 項`;
+        document.getElementById('main-subtitle').innerText = `請選擇 ${currentRules.maxMains} 項`;
+        document.getElementById('side-subtitle').innerText = `請選擇 ${currentRules.maxSides} 項`;
 
         const todaysMains = globalSchedule[today]?.mains || [];
         const todaysSides = globalSchedule[today]?.sides || [];
@@ -660,44 +218,32 @@
             const d = globalDishes.find(dish => dish.id === id);
             return d && d.sets && d.sets.includes(setId);
         });
-
         const filteredSides = todaysSides.filter(id => {
             const d = globalDishes.find(dish => dish.id === id);
             return d && d.sets && d.sets.includes(setId);
         });
 
-        renderCategory('main-grid', filteredMains, globalDishes, 'main');
-        renderCategory('side-grid', filteredSides, globalDishes, 'side');
-
-        selectedMains = [];
-        selectedSides = [];
+        renderCategory('main-grid', filteredMains, 'main');
+        renderCategory('side-grid', filteredSides, 'side');
+        selectedMains = []; selectedSides = [];
         checkButtonState();
     }
 
-    function renderCategory(containerId, itemIds, allDishes, categoryType) {
+    function renderCategory(containerId, itemIds, categoryType) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
-
-        if (!itemIds || itemIds.length === 0) {
-            container.innerHTML = `<div class="empty-msg">此套餐今日尚未安排${categoryType === 'main' ? '主菜' : '配菜'}</div>`;
+        if (itemIds.length === 0) {
+            container.innerHTML = `<div class="empty-msg">今日尚未安排${categoryType === 'main' ? '主菜' : '配菜'}</div>`;
             return;
         }
-
         itemIds.forEach(id => {
-            const dish = allDishes.find(d => d.id === id);
+            const dish = globalDishes.find(d => d.id === id);
             if (!dish) return;
-
-            const imgBg = categoryType === 'side' ? 'style="background-color:#d8f3dc; color:#40916c;"' : '';
-            let imgContent = `<div class="card-img" ${imgBg}>${dish.name}</div>`;
-            if (dish.image) {
-                imgContent = `<img src="${dish.image}" style="width:100%; height:120px; object-fit:cover;">`;
-            }
-
+            const imgContent = dish.image ? `<img src="${dish.image}" class="card-img">` : `<div class="card-img" style="display:flex; justify-content:center; align-items:center; color:#aaa;">無圖</div>`;
             const isSelected = (categoryType === 'main' ? selectedMains : selectedSides).includes(dish.id);
-
             container.innerHTML += `
-                <div class="card ${categoryType}-item ${isSelected ? 'selected' : ''}" id="${dish.id}" onclick="selectItem('${categoryType}', '${dish.id}')">
+                <div class="card ${isSelected ? 'selected' : ''}" id="${dish.id}" onclick="selectItem('${categoryType}', '${dish.id}')">
                     ${imgContent}
                     <div class="card-title">${dish.name}</div>
                     <div class="add-btn">${isSelected ? '✓' : '+'}</div>
@@ -711,7 +257,6 @@
         let selectedArr = category === 'main' ? selectedMains : selectedSides;
         const card = document.getElementById(clickedId);
         if (!card) return;
-        
         const index = selectedArr.indexOf(clickedId);
         if (index > -1) {
             selectedArr.splice(index, 1);
@@ -719,7 +264,7 @@
             card.querySelector('.add-btn').innerText = '+';
         } else {
             if (selectedArr.length >= maxLimit) {
-                alert(`此套餐的${category === 'main' ? '主菜' : '配菜'}只能選擇 ${maxLimit} 項喔！`);
+                alert(`只能選擇 ${maxLimit} 項！`);
                 return;
             }
             selectedArr.push(clickedId);
@@ -733,65 +278,38 @@
         const btn = document.getElementById('submit-order-btn');
         if (!btn) return;
         if (selectedMains.length === currentRules.maxMains && selectedSides.length === currentRules.maxSides) {
-            btn.innerText = '確認菜單';
-            btn.classList.add('ready');
+            btn.innerText = '確認菜單'; btn.classList.add('ready');
         } else {
-            btn.innerText = '請選擇菜單';
-            btn.classList.remove('ready');
+            btn.innerText = '請選擇菜單'; btn.classList.remove('ready');
         }
     }
 
     function handleFooterClick() {
         if (currentStep === 'menu') {
-            if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) {
-                alert(`請確認已選滿 ${currentRules.maxMains} 項主菜與 ${currentRules.maxSides} 項配菜！`);
-                return;
-            }
-            goToConfirmView();
+            if (selectedMains.length !== currentRules.maxMains || selectedSides.length !== currentRules.maxSides) return;
+            currentStep = 'confirm';
+            document.getElementById('view-menu').classList.remove('active');
+            document.getElementById('view-confirm').classList.add('active');
+            document.querySelector('.set-selector').style.display = 'none';
+            document.getElementById('back-edit-btn').style.display = 'block';
+
+            const setId = document.getElementById('set-select').value;
+            const setObj = globalSets.find(s => s.id === setId);
+            let mainRows = selectedMains.map(id => { const d = globalDishes.find(x => x.id === id); return `<div class="confirm-row"><div class="confirm-item-info"><img src="${d.image||''}" class="confirm-thumbnail"><span>${d.name}</span></div><span>主菜</span></div>`; }).join('');
+            let sideRows = selectedSides.map(id => { const d = globalDishes.find(x => x.id === id); return `<div class="confirm-row"><div class="confirm-item-info"><img src="${d.image||''}" class="confirm-thumbnail"><span>${d.name}</span></div><span>配菜</span></div>`; }).join('');
+
+            document.getElementById('confirm-details-content').innerHTML = `
+                <div class="confirm-item-card"><h4>所選套餐</h4><div style="font-weight:bold;">📌 ${setObj ? setObj.name : ''}</div></div>
+                <div class="confirm-item-card"><h4>主菜</h4>${mainRows}</div>
+                <div class="confirm-item-card"><h4>配菜</h4>${sideRows}</div>
+            `;
+            document.getElementById('submit-order-btn').innerText = '確認訂餐';
         } else if (currentStep === 'confirm') {
-            goToSuccessView();
+            currentStep = 'success';
+            document.getElementById('view-confirm').classList.remove('active');
+            document.getElementById('view-success').classList.add('active');
+            document.getElementById('footer-bar').style.display = 'none';
         }
-    }
-
-    function goToConfirmView() {
-        currentStep = 'confirm';
-        document.getElementById('view-menu').classList.remove('active');
-        document.getElementById('view-confirm').classList.add('active');
-        document.querySelector('.set-selector').style.display = 'none';
-        document.getElementById('back-edit-btn').style.display = 'block';
-
-        const setId = document.getElementById('set-select').value;
-        const setObj = globalSets.find(s => s.id === setId);
-        const setName = setObj ? setObj.name : '未知套餐';
-
-        let mainHtmlRows = '';
-        selectedMains.forEach(id => {
-            const d = globalDishes.find(item => item.id === id);
-            if (d) {
-                const thumb = d.image ? d.image : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="%23eee"/><text x="10" y="30" fill="%23aaa" font-size="10">無圖</text></svg>';
-                mainHtmlRows += `<div class="confirm-row"><div class="confirm-item-info"><img src="${thumb}" class="confirm-thumbnail"><span style="font-weight:bold; color:#333;">${d.name}</span></div><span style="color:#666; font-size:14px;">主菜</span></div>`;
-            }
-        });
-
-        let sideHtmlRows = '';
-        selectedSides.forEach(id => {
-            const d = globalDishes.find(item => item.id === id);
-            if (d) {
-                const thumb = d.image ? d.image : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="%23eee"/><text x="10" y="30" fill="%23aaa" font-size="10">無圖</text></svg>';
-                sideHtmlRows += `<div class="confirm-row"><div class="confirm-item-info"><img src="${thumb}" class="confirm-thumbnail"><span style="font-weight:bold; color:#333;">${d.name}</span></div><span style="color:#666; font-size:14px;">配菜</span></div>`;
-            }
-        });
-
-        document.getElementById('confirm-details-content').innerHTML = `
-            <div class="confirm-item-card"><h4>所選套餐類型</h4><div style="font-size: 16px; font-weight: bold; color: #333; padding: 5px 0;">📌 ${setName}</div></div>
-            <div class="confirm-item-card"><h4>主菜清單</h4>${mainHtmlRows}</div>
-            <div class="confirm-item-card"><h4>配菜清單</h4>${sideHtmlRows}</div>
-            <p style="text-align: center; color: #888; font-size: 14px; margin-top: 15px;">如需變更餐點，可點選左下角「返回修改」回到選單。</p>
-        `;
-
-        const btn = document.getElementById('submit-order-btn');
-        btn.innerText = '確認訂餐';
-        btn.classList.add('ready');
     }
 
     function backToMenuView() {
@@ -800,30 +318,10 @@
         document.getElementById('view-menu').classList.add('active');
         document.querySelector('.set-selector').style.display = 'block';
         document.getElementById('back-edit-btn').style.display = 'none';
-
-        const btn = document.getElementById('submit-order-btn');
-        btn.innerText = '確認菜單';
-        btn.classList.add('ready');
+        document.getElementById('submit-order-btn').innerText = '確認菜單';
     }
 
-    function goToSuccessView() {
-        currentStep = 'success';
-        document.getElementById('view-confirm').classList.remove('active');
-        document.getElementById('view-success').classList.add('active');
-        document.getElementById('footer-bar').style.display = 'none';
-    }
-
-    function resetOrder() {
-        currentStep = 'menu';
-        document.getElementById('view-success').classList.remove('active');
-        document.getElementById('view-menu').classList.add('active');
-        document.querySelector('.set-selector').style.display = 'block';
-        document.getElementById('footer-bar').style.display = 'flex';
-        document.getElementById('back-edit-btn').style.display = 'none';
-        selectedMains = [];
-        selectedSides = [];
-        initAppUI();
-    }
+    function resetOrder() { location.reload(); }
 </script>
 </body>
 </html>
