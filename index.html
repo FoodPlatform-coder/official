@@ -35,14 +35,14 @@
         }
 
         .slide-media-box {
-            width: 100%; aspect-ratio: 4 / 3; background: #000; overflow: hidden; flex-shrink: 0;
+            width: 100%; background: #000; overflow: hidden; flex: 1; display: flex; align-items: center; justify-content: center;
         }
         .slide-media {
             width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         .slide-content-box {
-            padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
         .slide-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; }
         .slide-desc { font-size: 14px; color: #555; line-height: 1.5; word-break: break-all; }
@@ -140,7 +140,6 @@
     let globalDishes = [];
     let globalSchedule = {};
     
-    // 💡 預設廣告備用清單
     let defaultAds = [
         { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
     ];
@@ -155,14 +154,10 @@
     let slideTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-        // 💡 優先從瀏覽器快取 (localStorage) 讀取上一次儲存的最新廣告，實現 0 秒秒開且直接顯示新內容！
+        // 💡 讀取快取，如果沒有才用預設
         const cachedAds = localStorage.getItem('cached_ads');
         if (cachedAds) {
-            try {
-                globalAds = JSON.parse(cachedAds);
-            } catch(e) {
-                globalAds = defaultAds;
-            }
+            try { globalAds = JSON.parse(cachedAds); } catch(e) { globalAds = defaultAds; }
         } else {
             globalAds = defaultAds;
         }
@@ -182,7 +177,7 @@
                 
                 if (data.ads && data.ads.length > 0) {
                     globalAds = data.ads;
-                    // 💡 把最新抓到的廣告存入快取，下次重開網頁直接生效
+                    // 💡 強制更新快取，確保下次重開直接載入雲端最新編輯狀態
                     localStorage.setItem('cached_ads', JSON.stringify(globalAds));
                     renderAdsCarousel();
                 }
@@ -191,6 +186,7 @@
             .catch(err => { console.error("背景載入資料失敗", err); });
     }
 
+    // 💡 嚴格判斷：有圖片就顯示圖片；有填標題/內容才顯示文字，若空白則絕不顯示多餘區塊
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -211,16 +207,24 @@
                 `;
             }
 
-            let titleHtml = ad.title ? `<div class="slide-title">${ad.title}</div>` : '';
-            let descHtml = ad.desc ? `<div class="slide-desc">${ad.desc}</div>` : '';
-
-            slidesContainer.innerHTML += `
-                <div class="carousel-slide">
-                    ${mediaHtml}
+            // 嚴格檢查：欄位有值才建立 HTML 標籤
+            let titleHtml = (ad.title && ad.title.trim() !== '') ? `<div class="slide-title">${ad.title}</div>` : '';
+            let descHtml = (ad.desc && ad.desc.trim() !== '') ? `<div class="slide-desc">${ad.desc}</div>` : '';
+            
+            let contentBoxHtml = '';
+            if (titleHtml !== '' || descHtml !== '') {
+                contentBoxHtml = `
                     <div class="slide-content-box">
                         ${titleHtml}
                         ${descHtml}
                     </div>
+                `;
+            }
+
+            slidesContainer.innerHTML += `
+                <div class="carousel-slide">
+                    ${mediaHtml}
+                    ${contentBoxHtml}
                 </div>
             `;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
