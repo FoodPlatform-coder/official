@@ -303,8 +303,22 @@
     function handleImageUpload(e, previewId, base64InputId, textId) {
         const file = e.target.files[0];
         if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = function(evt) {
+            const resultDataUrl = evt.target.result;
+            const previewImg = document.getElementById(previewId);
+            
+            // 如果是 GIF 動態圖，直接保留原始 Base64 不經過 Canvas 壓縮，以確保動畫能正常運作
+            if (file.type === 'image/gif') {
+                previewImg.src = resultDataUrl;
+                previewImg.style.display = 'block';
+                document.getElementById(textId).style.display = 'none';
+                document.getElementById(base64InputId).value = resultDataUrl;
+                return;
+            }
+
+            // 一般靜態圖片才進行 Canvas 壓縮
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
@@ -316,13 +330,12 @@
                 ctx.drawImage(img, 0, 0, width, height);
                 const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
                 
-                const previewImg = document.getElementById(previewId);
                 previewImg.src = compressedDataUrl;
                 previewImg.style.display = 'block';
                 document.getElementById(textId).style.display = 'none';
                 document.getElementById(base64InputId).value = compressedDataUrl;
             };
-            img.src = evt.target.result;
+            img.src = resultDataUrl;
         };
         reader.readAsDataURL(file);
     }
