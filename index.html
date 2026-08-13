@@ -11,7 +11,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 💡 背景點餐系統的「霧化」狀態 (未準備好時模糊且不能點擊) */
         .container.blurred {
             filter: blur(6px);
             pointer-events: none;
@@ -19,7 +18,6 @@
             transition: filter 0.4s ease;
         }
 
-        /* 💡 點擊開始點餐若未就緒時的轉圈圈遮罩 */
         #loading-mask {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.9); z-index: 3500;
@@ -41,7 +39,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         .carousel-container { 
-            position: relative; width: 100%; flex: 1; background: #fff; 
+            position: relative; width: 100%; flex: 1; background: #000; 
             overflow: hidden; display: flex; flex-direction: column;
         }
         .carousel-track {
@@ -56,14 +54,19 @@
             width: 100%; background: #000; overflow: hidden; flex: 1; display: flex; align-items: center; justify-content: center;
         }
         .slide-media {
-            width: 100%; height: 100%; object-fit: cover; display: block;
+            width: 100%; height: 100%; object-fit: contain; display: block; background: #000;
         }
 
+        /* 💡 修正：只有當有文字時才佔據空間，沒文字時高度歸零、無邊距，徹底消除白塊 */
         .slide-content-box {
-            padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            padding: 0 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #fff;
+            transition: padding 0.3s ease;
         }
-        .slide-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; }
-        .slide-desc { font-size: 14px; color: #555; line-height: 1.5; word-break: break-all; }
+        .slide-content-box.has-text {
+            padding: 15px 20px;
+        }
+        .slide-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 5px; }
+        .slide-desc { font-size: 14px; color: #555; line-height: 1.4; word-break: break-all; }
 
         .carousel-dots { 
             display: flex; justify-content: center; gap: 6px; padding: 10px 0; background: #fff; border-top: 1px solid #f0f0f0;
@@ -107,13 +110,11 @@
 </head>
 <body>
 
-<!-- 💡 點擊開始點餐若尚未就緒時顯示的載入中遮罩 -->
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">雲端資料準備中，請稍候...</div>
+    <div class="loading-text">正在讀取最新菜單與廣告...</div>
 </div>
 
-<!-- 💡 開局彈出的廣告視窗 -->
 <div id="ad-modal">
     <div class="ad-dialog">
         <div class="carousel-container">
@@ -126,7 +127,6 @@
     </div>
 </div>
 
-<!-- 💡 背景點餐系統（預設帶有 blurred 霧化狀態） -->
 <div class="container blurred" id="main-container">
     <div id="view-menu" class="view-section active">
         <div class="set-selector">
@@ -165,21 +165,29 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
-    ];
-    let isDataReady = false; // 追蹤背景資料是否就緒
+    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }];
+    let isDataReady = false;
 
     document.addEventListener("DOMContentLoaded", () => {
-        // 1. 0秒瞬間顯示預設或快取廣告，背景點餐系統呈現霧化
-        const cachedAds = localStorage.getItem('cached_ads');
-        if (cachedAds) {
-            try { globalAds = JSON.parse(cachedAds); } catch(e) {}
+        const cachedData = localStorage.getItem('app_cache_data');
+        if (cachedData) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                globalSets = parsed.sets || [];
+                globalDishes = parsed.dishes || [];
+                globalSchedule = parsed.schedule || {};
+                if (parsed.ads && parsed.ads.length > 0) globalAds = parsed.ads;
+                
+                renderAdsCarousel();
+                initAppUI();
+                isDataReady = true;
+                const container = document.getElementById('main-container');
+                if (container) container.classList.remove('blurred');
+            } catch(e) {}
         }
+
         renderAdsCarousel();
         startTimer();
-
-        // 2. 背景默默向 GAS 抓取最新資料
         loadDataFromGAS();
     });
 
@@ -192,24 +200,25 @@
                 globalSchedule = data.schedule || {};
                 if (data.ads && data.ads.length > 0) {
                     globalAds = data.ads;
-                    localStorage.setItem('cached_ads', JSON.stringify(globalAds));
                     renderAdsCarousel();
                 }
                 initAppUI();
                 
-                // 💡 背景資料準備就緒！自動解除背景霧化
+                localStorage.setItem('app_cache_data', JSON.stringify(data));
                 isDataReady = true;
+                
                 const container = document.getElementById('main-container');
                 if (container) container.classList.remove('blurred');
             })
             .catch(err => {
-                console.error("背景載入失敗", err);
+                console.error("背景同步失敗", err);
                 isDataReady = true;
                 const container = document.getElementById('main-container');
                 if (container) container.classList.remove('blurred');
             });
     }
 
+    // 💡 智慧版面分配：沒有文字時自動加上無文字樣式，讓 GIF 完美撐滿全螢幕
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
@@ -221,9 +230,13 @@
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
             let mediaHtml = (ad.image && ad.image.trim() !== '') ? `<div class="slide-media-box"><img src="${ad.image}" class="slide-media"></div>` : '';
+            
             let titleHtml = (ad.title && ad.title.trim() !== '') ? `<div class="slide-title">${ad.title}</div>` : '';
             let descHtml = (ad.desc && ad.desc.trim() !== '') ? `<div class="slide-desc">${ad.desc}</div>` : '';
-            let contentBoxHtml = (titleHtml !== '' || descHtml !== '') ? `<div class="slide-content-box">${titleHtml}${descHtml}</div>` : '';
+            
+            let hasText = (titleHtml !== '' || descHtml !== '');
+            let contentClass = hasText ? 'slide-content-box has-text' : 'slide-content-box';
+            let contentBoxHtml = `<div class="${contentClass}">${titleHtml}${descHtml}</div>`;
 
             slidesContainer.innerHTML += `<div class="carousel-slide">${mediaHtml}${contentBoxHtml}</div>`;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
@@ -251,14 +264,11 @@
     function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 7000); }
     function resetTimer() { clearInterval(slideTimer); startTimer(); }
 
-    // 💡 當使用者按下「開始點餐」時的智慧判斷邏輯
     function closeAdModal() {
         if (isDataReady) {
-            // 情況 A：資料早已準備好，關閉廣告，直接操作系統（0秒進入）
             document.getElementById('ad-modal').style.display = 'none';
             clearInterval(slideTimer);
         } else {
-            // 情況 B：資料還在路上，關閉廣告，但秀出「載入中」遮罩，直到資料到為止（3秒內）
             document.getElementById('ad-modal').style.display = 'none';
             clearInterval(slideTimer);
             
