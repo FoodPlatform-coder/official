@@ -11,26 +11,67 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
+        /* 💡 廣告彈窗升級：上半部圖片，下方可捲動與固定按鈕 */
         #ad-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 3000;
-            display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 3000;
+            display: flex; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
         }
-        .ad-dialog { background: #fff; width: 100%; max-width: 360px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
-        .carousel-container { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #f8f9fa; overflow: hidden; }
-        .carousel-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
-        .carousel-slide.active { opacity: 1; }
-        .slide-title { font-size: 17px; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
-        .slide-desc { font-size: 13px; color: #666; line-height: 1.4; max-height: 45px; overflow-y: auto; }
-        .carousel-dots { display: flex; justify-content: center; gap: 8px; padding: 10px 0; background: #fff; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; cursor: pointer; }
-        .dot.active { background: var(--primary-color); width: 20px; border-radius: 4px; }
-        .ad-footer { padding: 10px 20px 20px 20px; background: #fff; text-align: center; }
-        .btn-start-order { background-color: var(--primary-color); color: white; border: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .ad-dialog { 
+            background: #fff; width: 100%; max-width: 380px; max-height: 85vh; 
+            border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+            display: flex; flex-direction: column; animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* 輪播主體容器 */
+        .carousel-container { 
+            position: relative; width: 100%; flex: 1; background: #fff; 
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+        .carousel-track {
+            position: relative; width: 100%; height: 100%; display: flex; transition: transform 0.4s ease-in-out;
+        }
+        .carousel-slide { 
+            min-width: 100%; height: 100%; display: flex; flex-direction: column; 
+            box-sizing: border-box; background: #fff; overflow-y: auto;
+        }
+
+        /* 🖼️ 有圖片/GIF時：佔據上半部 */
+        .slide-media-box {
+            width: 100%; aspect-ratio: 16 / 10; background: #000; overflow: hidden; flex-shrink: 0;
+        }
+        .slide-media {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+
+        /* 📝 文字與捲動區塊 */
+        .slide-content-box {
+            padding: 15px 20px; flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
+        }
+        .slide-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; text-align: center; }
+        .slide-desc { font-size: 14px; color: #555; line-height: 1.5; text-align: center; word-break: break-all; }
+
+        /* 導覽小圓點 */
+        .carousel-dots { 
+            display: flex; justify-content: center; gap: 6px; padding: 8px 0; background: #fff; border-top: 1px solid #f0f0f0;
+        }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; cursor: pointer; transition: 0.3s; }
+        .dot.active { background: var(--primary-color); width: 18px; border-radius: 4px; }
+
+        /* 底部按鈕區（固定不動） */
+        .ad-footer { 
+            padding: 12px 20px 20px 20px; background: #fff; text-align: center; border-top: 1px solid #f0f0f0; flex-shrink: 0;
+        }
+        .btn-start-order { 
+            background-color: var(--primary-color); color: white; border: none; width: 100%; padding: 12px; 
+            font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-start-order:hover { background-color: #009900; }
+
+        /* 原有點餐介面樣式維持 */
         .section-header { padding: 15px 20px; background-color: #fff; border-bottom: 1px solid #eee; font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
         .set-selector { padding: 15px 20px; background: #fff; }
         select { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; }
-        
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px 20px; background: #f8f9fa; }
         .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card-img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
@@ -39,18 +80,15 @@
         .card.selected { border: 2px solid var(--primary-color); box-shadow: 0 0 10px rgba(0, 185, 0, 0.2); }
         .card.selected .add-btn { background-color: var(--primary-color); color: #fff; }
         .empty-msg { grid-column: span 2; text-align: center; padding: 20px; color: #999; font-size: 14px; }
-
         .confirm-box { padding: 20px; }
         .confirm-item-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .confirm-item-card h4 { margin: 0 0 12px 0; color: var(--primary-color); font-size: 16px; }
         .confirm-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 15px; }
         .confirm-thumbnail { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; background: #eee; margin-right: 10px; }
         .confirm-item-info { display: flex; align-items: center; }
-
         .success-box { text-align: center; padding: 60px 20px; }
         .success-icon { width: 80px; height: 80px; background-color: var(--primary-color); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 40px; margin: 0 auto 20px auto; }
-
-        .footer { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: #fff; padding: 15px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); box-sizing: border-box; display: flex; gap: 10px; align-items: center; left: 50%; transform: translateX(-50%); z-index: 100; }
+        .footer { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: #fff; padding: 15px 20px; box-shadow: -2px 10px rgba(0,0,0,0.1); box-sizing: border-box; display: flex; gap: 10px; align-items: center; left: 50%; transform: translateX(-50%); z-index: 100; }
         .submit-btn { background: #ccc; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: not-allowed; transition: 0.3s; }
         .submit-btn.ready { background: var(--primary-color); cursor: pointer; }
         .btn-back-edit { background-color: #6c757d; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
@@ -58,15 +96,13 @@
 </head>
 <body>
 
-<!-- 💡 廣告彈窗第一時間呈現，不需等待背景資料 -->
+<!-- 💡 動態圖文廣告彈窗 -->
 <div id="ad-modal">
     <div class="ad-dialog">
-        <div class="carousel-container" id="carousel-slides">
-            <div class="carousel-slide active"><div class="slide-title">歡迎光臨 一家知煮</div><div class="slide-desc">美味手作料理，天天陪伴。</div></div>
+        <div class="carousel-container">
+            <div class="carousel-track" id="carousel-slides"></div>
         </div>
-        <div class="carousel-dots" id="carousel-dots">
-            <span class="dot active"></span>
-        </div>
+        <div class="carousel-dots" id="carousel-dots"></div>
         <div class="ad-footer">
             <button class="btn-start-order" onclick="closeAdModal()">開始點餐</button>
         </div>
@@ -111,7 +147,9 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [{ title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。" }];
+    let globalAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
+    ];
     let selectedMains = [];
     let selectedSides = [];
     let currentRules = { maxMains: 1, maxSides: 1 };
@@ -121,7 +159,6 @@
     let slideTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-        startTimer();
         loadDataFromGAS();
     });
 
@@ -134,23 +171,51 @@
                 globalSchedule = data.schedule || {};
                 if (data.ads && data.ads.length > 0) {
                     globalAds = data.ads;
-                    renderAdsCarousel();
                 }
+                renderAdsCarousel();
                 initAppUI();
             })
-            .catch(err => { console.error("背景載入資料失敗", err); });
+            .catch(err => { 
+                console.error("載入失敗", err);
+                renderAdsCarousel(); // 即使斷線也確保廣告能渲染
+                initAppUI();
+            });
     }
 
+    // 💡 渲染動態圖文輪播：自動判斷是否有圖片/GIF
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
         if (!slidesContainer || !dotsContainer) return;
-        slidesContainer.innerHTML = ''; dotsContainer.innerHTML = '';
+        
+        slidesContainer.innerHTML = ''; 
+        dotsContainer.innerHTML = '';
+
         globalAds.forEach((ad, index) => {
             const isActive = index === 0 ? 'active' : '';
-            slidesContainer.innerHTML += `<div class="carousel-slide ${isActive}"><div class="slide-title">${ad.title || ''}</div><div class="slide-desc">${ad.desc || ''}</div></div>`;
+            
+            // 如果有上傳圖片或GIF，顯示上半部圖片框；否則純文字顯示
+            let mediaHtml = '';
+            if (ad.image && ad.image.trim() !== '') {
+                mediaHtml = `
+                    <div class="slide-media-box">
+                        <img src="${ad.image}" class="slide-media" alt="廣告圖片">
+                    </div>
+                `;
+            }
+
+            slidesContainer.innerHTML += `
+                <div class="carousel-slide">
+                    ${mediaHtml}
+                    <div class="slide-content-box">
+                        <div class="slide-title">${ad.title || ''}</div>
+                        <div class="slide-desc">${ad.desc || ''}</div>
+                    </div>
+                </div>
+            `;
             dotsContainer.innerHTML += `<span class="dot ${isActive}" onclick="currentSlide(${index})"></span>`;
         });
+        startTimer();
     }
 
     function showSlides(n) {
@@ -159,14 +224,20 @@
         if (slides.length === 0) return;
         if (n >= slides.length) slideIndex = 0;
         if (n < 0) slideIndex = slides.length - 1;
-        slides.forEach(s => s.classList.remove('active'));
+        
+        const track = document.getElementById('carousel-slides');
+        if (track) {
+            track.style.transform = `translateX(-${slideIndex * 100}%)`;
+        }
+        
         dots.forEach(d => d.classList.remove('active'));
-        slides[slideIndex].classList.add('active');
-        dots[slideIndex].classList.add('active');
+        if (dots[slideIndex]) dots[slideIndex].classList.add('active');
     }
+
     function nextSlide() { slideIndex++; showSlides(slideIndex); }
-    function currentSlide(n) { slideIndex = n; showSlides(slideIndex); }
-    function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 6000); }
+    function currentSlide(n) { slideIndex = n; showSlides(slideIndex); resetTimer(); }
+    function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 7000); }
+    function resetTimer() { clearInterval(slideTimer); startTimer(); }
     function closeAdModal() { document.getElementById('ad-modal').style.display = 'none'; clearInterval(slideTimer); }
 
     function initAppUI() {
