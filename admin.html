@@ -144,7 +144,7 @@
         <input type="hidden" id="dish-id">
         <input type="hidden" id="dish-img-base64">
         <div class="form-group">
-            <label>圖片上傳 (自動壓縮)</label>
+            <label>圖片上傳 (支援GIF動態圖)</label>
             <div class="img-upload-preview" onclick="document.getElementById('dish-img-upload').click()">
                 <span id="img-upload-text">點擊上傳圖片</span>
                 <img id="dish-img-preview" src="">
@@ -299,7 +299,7 @@
         alert('廣告已更新並同步至試算表');
     }
 
-    // 通用圖片壓縮上傳函式
+    // 💡 支援 GIF 動態圖與圖片上傳處理
     function handleImageUpload(e, previewId, base64InputId, textId) {
         const file = e.target.files[0];
         if (!file) return;
@@ -309,7 +309,6 @@
             const resultDataUrl = evt.target.result;
             const previewImg = document.getElementById(previewId);
             
-            // 如果是 GIF 動態圖，直接保留原始 Base64 不經過 Canvas 壓縮，以確保動畫能正常運作
             if (file.type === 'image/gif') {
                 previewImg.src = resultDataUrl;
                 previewImg.style.display = 'block';
@@ -318,7 +317,6 @@
                 return;
             }
 
-            // 一般靜態圖片才進行 Canvas 壓縮
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
