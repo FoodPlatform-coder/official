@@ -134,23 +134,45 @@
     });
 
     function loadDataFromGAS() {
-        fetch(GAS_URL + "?action=getData")
-            .then(res => res.json())
-            .then(data => {
-                globalSets = data.sets || [];
-                globalDishes = data.dishes || [];
-                globalSchedule = data.schedule || {};
-                
-                renderAdsCarousel();
-                initAppUI();
-                
-                const mask = document.getElementById('loading-mask');
-                if (mask) mask.style.display = 'none';
-            })
-            .catch(err => {
-                console.error("載入失敗", err);
-                alert("連線雲端失敗，請稍後再試");
-            });
+        fetch(GAS_URL + "?action=getData", {
+            method: "GET",
+            redirect: "follow" // 💡 強制跟隨 Google Apps Script 的重新導向
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("網路回應不成功");
+            return res.json();
+        })
+        .then(data => {
+            globalSets = data.sets || [];
+            globalDishes = data.dishes || [];
+            globalSchedule = data.schedule || {};
+            
+            renderAdsCarousel();
+            initAppUI();
+            
+            const mask = document.getElementById('loading-mask');
+            if (mask) mask.style.display = 'none';
+        })
+        .catch(err => {
+            console.warn("初次連線延遲，正在嘗試背景重新載入...", err);
+            // 💡 容錯機制：如果失敗，自動再試一次，避免直接彈窗中斷
+            setTimeout(() => {
+                fetch(GAS_URL + "?action=getData", { redirect: "follow" })
+                .then(res => res.json())
+                .then(data => {
+                    globalSets = data.sets || [];
+                    globalDishes = data.dishes || [];
+                    globalSchedule = data.schedule || {};
+                    renderAdsCarousel();
+                    initAppUI();
+                    const mask = document.getElementById('loading-mask');
+                    if (mask) mask.style.display = 'none';
+                })
+                .catch(e => {
+                    alert("無法連線至雲端試算表，請檢查 GAS 部署權限是否為「任何人」！");
+                });
+            }, 1000);
+        });
     }
 
     function renderAdsCarousel() {
