@@ -11,7 +11,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 💡 廣告彈窗樣式：完美支援圖片佔據上半部，下方按鈕固定 */
         #ad-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: 3000;
             display: flex; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;
@@ -35,7 +34,6 @@
             box-sizing: border-box; background: #fff; overflow-y: auto;
         }
 
-        /* 有圖片/GIF時：撐滿上半部 */
         .slide-media-box {
             width: 100%; aspect-ratio: 4 / 3; background: #000; overflow: hidden; flex-shrink: 0;
         }
@@ -43,7 +41,6 @@
             width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
-        /* 純文字或帶說明區塊 */
         .slide-content-box {
             padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
@@ -92,22 +89,12 @@
 </head>
 <body>
 
-<!-- 💡 廣告彈窗：一開網頁立即帶有預設字樣顯示 -->
 <div id="ad-modal">
     <div class="ad-dialog">
         <div class="carousel-container">
-            <div class="carousel-track" id="carousel-slides">
-                <div class="carousel-slide">
-                    <div class="slide-content-box">
-                        <div class="slide-title">歡迎光臨 一家知煮</div>
-                        <div class="slide-desc">美味手作料理，天天陪伴。</div>
-                    </div>
-                </div>
-            </div>
+            <div class="carousel-track" id="carousel-slides"></div>
         </div>
-        <div class="carousel-dots" id="carousel-dots">
-            <span class="dot active"></span>
-        </div>
+        <div class="carousel-dots" id="carousel-dots"></div>
         <div class="ad-footer">
             <button class="btn-start-order" onclick="closeAdModal()">開始點餐</button>
         </div>
@@ -152,13 +139,13 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    let globalAds = [
-        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" },
-        { title: "人氣套餐上線", desc: "精選主菜搭配新鮮時蔬。", image: "" },
-        { title: "會員限定優惠", desc: "加入官方LINE享有專屬折扣。", image: "" },
-        { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。", image: "" },
-        { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！", image: "" }
+    
+    // 💡 預設廣告備用清單
+    let defaultAds = [
+        { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
     ];
+
+    let globalAds = [];
     let selectedMains = [];
     let selectedSides = [];
     let currentRules = { maxMains: 1, maxSides: 1 };
@@ -168,7 +155,19 @@
     let slideTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-        renderAdsCarousel(); // 💡 網頁一開立刻渲染預設廣告，不用等雲端
+        // 💡 優先從瀏覽器快取 (localStorage) 讀取上一次儲存的最新廣告，實現 0 秒秒開且直接顯示新內容！
+        const cachedAds = localStorage.getItem('cached_ads');
+        if (cachedAds) {
+            try {
+                globalAds = JSON.parse(cachedAds);
+            } catch(e) {
+                globalAds = defaultAds;
+            }
+        } else {
+            globalAds = defaultAds;
+        }
+
+        renderAdsCarousel();
         startTimer();
         loadDataFromGAS();
     });
@@ -180,16 +179,18 @@
                 globalSets = data.sets || [];
                 globalDishes = data.dishes || [];
                 globalSchedule = data.schedule || {};
+                
                 if (data.ads && data.ads.length > 0) {
                     globalAds = data.ads;
-                    renderAdsCarousel(); // 雲端資料回來後更新最新廣告
+                    // 💡 把最新抓到的廣告存入快取，下次重開網頁直接生效
+                    localStorage.setItem('cached_ads', JSON.stringify(globalAds));
+                    renderAdsCarousel();
                 }
                 initAppUI();
             })
             .catch(err => { console.error("背景載入資料失敗", err); });
     }
 
-    // 💡 智慧圖文渲染：有圖片就顯示大圖；若有填寫文字則同時顯示，若文字空白則只單純展示圖片
     function renderAdsCarousel() {
         const slidesContainer = document.getElementById('carousel-slides');
         const dotsContainer = document.getElementById('carousel-dots');
