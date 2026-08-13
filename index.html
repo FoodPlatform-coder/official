@@ -11,11 +11,11 @@
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* 💡 載入中遮罩（Loading Mask） */
+        /* 💡 載入中遮罩（只有在點擊開始點餐且資料未就緒時才會短暫出現） */
         #loading-mask {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.95); z-index: 3500;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s ease;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
         }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -99,10 +99,9 @@
 </head>
 <body>
 
-<!-- 💡 載入中遮罩 -->
 <div id="loading-mask">
     <div class="spinner"></div>
-    <div class="loading-text">雲端資料同步中...</div>
+    <div class="loading-text">正在連接試算表，請稍候...</div>
 </div>
 
 <div id="ad-modal">
@@ -155,7 +154,8 @@
     let globalSets = [];
     let globalDishes = [];
     let globalSchedule = {};
-    
+    let isDataLoaded = false; // 💡 追蹤資料是否已從試算表抓回來
+
     let defaultAds = [
         { title: "歡迎光臨 一家知煮", desc: "美味手作料理，天天陪伴。", image: "" }
     ];
@@ -170,11 +170,14 @@
     let slideTimer = null;
 
     document.addEventListener("DOMContentLoaded", () => {
+        // 1. 瞬間載入快取廣告，廣告彈窗 0 秒秒開
         const cachedAds = localStorage.getItem('cached_ads');
         globalAds = cachedAds ? JSON.parse(cachedAds) : defaultAds;
 
         renderAdsCarousel();
         startTimer();
+
+        // 2. 背景默默向試算表抓資料，不影響畫面的呈現
         loadDataFromGAS();
     });
 
@@ -192,15 +195,11 @@
                     renderAdsCarousel();
                 }
                 initAppUI();
-                
-                // 💡 資料載入完成，隱藏轉圈圈遮罩
-                const mask = document.getElementById('loading-mask');
-                if (mask) mask.style.display = 'none';
+                isDataLoaded = true; // 💡 標記資料已就緒
             })
             .catch(err => { 
                 console.error("背景載入資料失敗", err);
-                const mask = document.getElementById('loading-mask');
-                if (mask) mask.style.display = 'none';
+                isDataLoaded = true; // 即使失敗也解鎖，避免卡死
             });
     }
 
@@ -267,7 +266,30 @@
     function currentSlide(n) { slideIndex = n; showSlides(slideIndex); resetTimer(); }
     function startTimer() { if(!slideTimer) slideTimer = setInterval(nextSlide, 7000); }
     function resetTimer() { clearInterval(slideTimer); startTimer(); }
-    function closeAdModal() { document.getElementById('ad-modal').style.display = 'none'; clearInterval(slideTimer); }
+
+    // 💡 當使用者點擊「開始點餐」時的邏輯
+    function closeAdModal() {
+        if (isDataLoaded) {
+            // 如果資料已經抓好了，直接關閉廣告，秒進點餐畫面
+            document.getElementById('ad-modal').style.display = 'none';
+            clearInterval(slideTimer);
+        } else {
+            // 如果資料還沒抓完，先關閉廣告，並顯示「載入中」遮罩，等資料一到立刻隱藏遮罩
+            document.getElementById('ad-modal').style.display = 'none';
+            clearInterval(slideTimer);
+            
+            const mask = document.getElementById('loading-mask');
+            if (mask) mask.style.display = 'flex';
+
+            // 設定一個極速輪詢檢查點，資料一回來立刻放行
+            let checkInterval = setInterval(() => {
+                if (isDataLoaded) {
+                    clearInterval(checkInterval);
+                    if (mask) mask.style.display = 'none';
+                }
+            }, 100);
+        }
+    }
 
     function initAppUI() {
         const setSelect = document.getElementById('set-select');
