@@ -145,8 +145,8 @@
         <h3 id="dish-modal-title">新增菜色</h3>
         <input type="hidden" id="dish-id">
         <div class="form-group">
-            <label>圖片網址 (請貼上 Google 雲端硬碟的圖片/GIF 共享連結)</label>
-            <input type="text" id="dish-image-url" class="form-control" placeholder="https://...">
+            <label>圖片網址 (直接貼上雲端硬碟的共用連結即可)</label>
+            <input type="text" id="dish-image-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
         </div>
         <div class="form-group"><label>菜色名稱</label><input type="text" id="dish-name" class="form-control"></div>
         <div class="form-group"><label>類別</label><select id="dish-type" class="form-control"><option value="main">主菜</option><option value="side">配菜</option></select></div>
@@ -161,8 +161,8 @@
         <h3>編輯廣告版位</h3>
         <input type="hidden" id="ad-index">
         <div class="form-group">
-            <label>廣告圖片 / GIF 網址 (請貼上雲端硬碟共用連結)</label>
-            <input type="text" id="ad-image-url" class="form-control" placeholder="https://...">
+            <label>廣告圖片 / GIF 網址 (直接貼上雲端硬碟的共用連結即可)</label>
+            <input type="text" id="ad-image-url" class="form-control" placeholder="https://drive.google.com/file/d/.../view">
         </div>
         <div class="form-group"><label>標題</label><input type="text" id="ad-title" class="form-control"></div>
         <div class="form-group"><label>內容</label><textarea id="ad-desc" class="form-control" rows="3"></textarea></div>
@@ -183,6 +183,18 @@
         { title: "每日新鮮供應", desc: "嚴選優質肉品與在地蔬菜。", image: "" },
         { title: "線上快速點餐", desc: "輕鬆三步驟完成點餐！", image: "" }
     ];
+
+    // 💡 智能轉換：自動將 Google 雲端硬碟共用網址轉為可用的直連圖片網址
+    function parseDriveUrl(url) {
+        if (!url) return '';
+        url = url.trim();
+        // 檢查是否為 Google 雲端硬碟檔案網址
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            return 'https://lh3.google.com/u/0/d/' + match[1];
+        }
+        return url; // 如果是其他圖床網址則保持原樣
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
         if (localStorage.getItem('isLoggedIn') === 'true') {
@@ -277,7 +289,8 @@
         const tbody = document.getElementById('ad-list');
         tbody.innerHTML = '';
         globalAds.forEach((ad, index) => {
-            const thumb = ad.image ? `<img src="${ad.image}" class="dish-thumbnail">` : '<span style="color:#999; font-size:12px;">無圖</span>';
+            const imgSrc = parseDriveUrl(ad.image);
+            const thumb = imgSrc ? `<img src="${imgSrc}" class="dish-thumbnail">` : '<span style="color:#999; font-size:12px;">無圖</span>';
             tbody.innerHTML += `<tr><td>${thumb}</td><td>${ad.title}</td><td>${ad.desc}</td><td><button class="btn btn-edit" onclick="openAdModal(${index})">編輯</button></td></tr>`;
         });
     }
@@ -295,7 +308,8 @@
         const index = parseInt(document.getElementById('ad-index').value);
         globalAds[index].title = document.getElementById('ad-title').value.trim();
         globalAds[index].desc = document.getElementById('ad-desc').value.trim();
-        globalAds[index].image = document.getElementById('ad-image-url').value.trim();
+        // 自動轉換並儲存直連網址
+        globalAds[index].image = parseDriveUrl(document.getElementById('ad-image-url').value);
         
         syncToGAS();
         closeModal('modal-ad');
@@ -305,11 +319,13 @@
 
     function renderData() { renderSetBadges(); renderDishes(); }
     function renderSetBadges() { document.getElementById('display-set-badges').innerHTML = globalSets.length === 0 ? '<span style="color:#999;">目前無套餐</span>' : globalSets.map(s => `<span class="badge">${s.name} (主${s.maxMains}/配${s.maxSides})</span>`).join(''); }
+    
     function renderDishes() {
         const tbody = document.getElementById('dish-list');
         tbody.innerHTML = globalDishes.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:#999;">庫房目前無菜色</td></tr>' : globalDishes.map(d => {
             const setNames = (d.sets || []).map(setId => { const s = globalSets.find(x => x.id === setId); return s ? s.name : ''; }).filter(Boolean).join('、');
-            return `<tr><td><img src="${d.image||''}" class="dish-thumbnail"></td><td><b>${d.name}</b></td><td>${d.type==='main'?'主菜':'配菜'}</td><td>${setNames || '未指定'}</td><td><button class="btn btn-edit" onclick="openDishModal('${d.id}')">編輯</button> <button class="btn btn-delete" onclick="deleteDish('${d.id}')">刪除</button></td></tr>`;
+            const imgSrc = parseDriveUrl(d.image);
+            return `<tr><td><img src="${imgSrc}" class="dish-thumbnail"></td><td><b>${d.name}</b></td><td>${d.type==='main'?'主菜':'配菜'}</td><td>${setNames || '未指定'}</td><td><button class="btn btn-edit" onclick="openDishModal('${d.id}')">編輯</button> <button class="btn btn-delete" onclick="deleteDish('${d.id}')">刪除</button></td></tr>`;
         }).join('');
     }
 
@@ -359,7 +375,8 @@
         const editId = document.getElementById('dish-id').value;
         const name = document.getElementById('dish-name').value.trim();
         const type = document.getElementById('dish-type').value;
-        const image = document.getElementById('dish-image-url').value.trim();
+        // 自動轉換並儲存直連網址
+        const image = parseDriveUrl(document.getElementById('dish-image-url').value);
         const sets = Array.from(document.querySelectorAll('.dish-set-chk:checked')).map(el => el.value);
 
         if (!name) return alert('請填寫菜色名稱');
