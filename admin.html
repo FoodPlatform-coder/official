@@ -52,10 +52,6 @@
         .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; font-size: 14px; }
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
         .checkbox-item { background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 14px; }
-        
-        .img-upload-preview { width: 100%; height: 150px; background: #f0f0f0; border: 2px dashed #ccc; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; overflow: hidden; cursor: pointer; position: relative; }
-        .img-upload-preview img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
-        .img-upload-preview span { color: #888; pointer-events: none; z-index: 2; }
     </style>
 </head>
 <body>
@@ -148,14 +144,9 @@
         <button class="modal-close" onclick="closeModal('modal-dish')">&times;</button>
         <h3 id="dish-modal-title">新增菜色</h3>
         <input type="hidden" id="dish-id">
-        <input type="hidden" id="dish-img-base64">
         <div class="form-group">
-            <label>圖片上傳 (支援GIF動態圖)</label>
-            <div class="img-upload-preview" onclick="document.getElementById('dish-img-upload').click()">
-                <span id="img-upload-text">點擊上傳圖片</span>
-                <img id="dish-img-preview" src="">
-            </div>
-            <input type="file" id="dish-img-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'dish-img-preview', 'dish-img-base64', 'img-upload-text')">
+            <label>圖片網址 (請貼上 Google 雲端硬碟的圖片/GIF 共享連結)</label>
+            <input type="text" id="dish-image-url" class="form-control" placeholder="https://...">
         </div>
         <div class="form-group"><label>菜色名稱</label><input type="text" id="dish-name" class="form-control"></div>
         <div class="form-group"><label>類別</label><select id="dish-type" class="form-control"><option value="main">主菜</option><option value="side">配菜</option></select></div>
@@ -169,14 +160,9 @@
         <button class="modal-close" onclick="closeModal('modal-ad')">&times;</button>
         <h3>編輯廣告版位</h3>
         <input type="hidden" id="ad-index">
-        <input type="hidden" id="ad-img-base64">
         <div class="form-group">
-            <label>廣告圖片 / GIF 動態圖上傳 (選填)</label>
-            <div class="img-upload-preview" onclick="document.getElementById('ad-img-upload').click()">
-                <span id="ad-img-upload-text">點擊上傳廣告圖/GIF</span>
-                <img id="ad-img-preview" src="">
-            </div>
-            <input type="file" id="ad-img-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'ad-img-preview', 'ad-img-base64', 'ad-img-upload-text')">
+            <label>廣告圖片 / GIF 網址 (請貼上雲端硬碟共用連結)</label>
+            <input type="text" id="ad-image-url" class="form-control" placeholder="https://...">
         </div>
         <div class="form-group"><label>標題</label><input type="text" id="ad-title" class="form-control"></div>
         <div class="form-group"><label>內容</label><textarea id="ad-desc" class="form-control" rows="3"></textarea></div>
@@ -221,7 +207,6 @@
         document.getElementById('sidebar-nav').style.display = 'block';
         document.getElementById('main-content').style.display = 'block';
         
-        // 💡 1. 優先從本地快取秒開後台介面，0秒呈現
         const cachedAdmin = localStorage.getItem('admin_fast_cache');
         if (cachedAdmin) {
             try {
@@ -235,8 +220,6 @@
         
         renderData();
         renderAds();
-
-        // 💡 2. 背景默默向雲端同步最新資料
         fetchDataInBackground();
     }
 
@@ -272,7 +255,6 @@
             schedule: globalSchedule,
             ads: globalAds
         };
-        // 同時更新本地快取
         localStorage.setItem('admin_fast_cache', JSON.stringify(payload));
 
         fetch(GAS_URL, {
@@ -305,21 +287,7 @@
         const ad = globalAds[index] || {};
         document.getElementById('ad-title').value = ad.title || '';
         document.getElementById('ad-desc').value = ad.desc || '';
-        
-        const previewImg = document.getElementById('ad-img-preview');
-        const uploadText = document.getElementById('ad-img-upload-text');
-        if (ad.image) {
-            previewImg.src = ad.image;
-            previewImg.style.display = 'block';
-            uploadText.style.display = 'none';
-            document.getElementById('ad-img-base64').value = ad.image;
-        } else {
-            previewImg.src = '';
-            previewImg.style.display = 'none';
-            uploadText.style.display = 'block';
-            document.getElementById('ad-img-base64').value = '';
-        }
-
+        document.getElementById('ad-image-url').value = ad.image || '';
         document.getElementById('modal-ad').classList.add('active');
     }
 
@@ -327,50 +295,12 @@
         const index = parseInt(document.getElementById('ad-index').value);
         globalAds[index].title = document.getElementById('ad-title').value.trim();
         globalAds[index].desc = document.getElementById('ad-desc').value.trim();
-        globalAds[index].image = document.getElementById('ad-img-base64').value || '';
+        globalAds[index].image = document.getElementById('ad-image-url').value.trim();
         
         syncToGAS();
         closeModal('modal-ad');
         renderAds();
         alert('廣告已更新並同步至試算表');
-    }
-
-    function handleImageUpload(e, previewId, base64InputId, textId) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            const resultDataUrl = evt.target.result;
-            const previewImg = document.getElementById(previewId);
-            
-            if (file.type === 'image/gif') {
-                previewImg.src = resultDataUrl;
-                previewImg.style.display = 'block';
-                document.getElementById(textId).style.display = 'none';
-                document.getElementById(base64InputId).value = resultDataUrl;
-                return;
-            }
-
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 500;
-                let width = img.width, height = img.height;
-                if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-                canvas.width = width; canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                
-                previewImg.src = compressedDataUrl;
-                previewImg.style.display = 'block';
-                document.getElementById(textId).style.display = 'none';
-                document.getElementById(base64InputId).value = compressedDataUrl;
-            };
-            img.src = resultDataUrl;
-        };
-        reader.readAsDataURL(file);
     }
 
     function renderData() { renderSetBadges(); renderDishes(); }
@@ -402,11 +332,7 @@
         document.getElementById('dish-id').value = '';
         document.getElementById('dish-name').value = '';
         document.getElementById('dish-type').value = 'main';
-        document.getElementById('dish-img-base64').value = '';
-        const previewImg = document.getElementById('dish-img-preview');
-        previewImg.src = ''; previewImg.style.display = 'none';
-        document.getElementById('img-upload-text').style.display = 'block';
-        document.getElementById('dish-img-upload').value = '';
+        document.getElementById('dish-image-url').value = '';
 
         let assignedSets = [];
         if (editId) {
@@ -415,12 +341,7 @@
                 document.getElementById('dish-id').value = dish.id;
                 document.getElementById('dish-name').value = dish.name;
                 document.getElementById('dish-type').value = dish.type;
-                if (dish.image) {
-                    previewImg.src = dish.image;
-                    previewImg.style.display = 'block';
-                    document.getElementById('img-upload-text').style.display = 'none';
-                    document.getElementById('dish-img-base64').value = dish.image;
-                }
+                document.getElementById('dish-image-url').value = dish.image || '';
                 assignedSets = dish.sets || [];
             }
         }
@@ -438,7 +359,7 @@
         const editId = document.getElementById('dish-id').value;
         const name = document.getElementById('dish-name').value.trim();
         const type = document.getElementById('dish-type').value;
-        const image = document.getElementById('dish-img-base64').value;
+        const image = document.getElementById('dish-image-url').value.trim();
         const sets = Array.from(document.querySelectorAll('.dish-set-chk:checked')).map(el => el.value);
 
         if (!name) return alert('請填寫菜色名稱');
@@ -447,7 +368,7 @@
         if (editId) {
             const index = globalDishes.findIndex(d => d.id === editId);
             if (index > -1) {
-                globalDishes[index] = { id: editId, name, type, sets, image: image || globalDishes[index].image };
+                globalDishes[index] = { id: editId, name, type, sets, image };
             }
         } else {
             globalDishes.push({ id: 'dish_' + Date.now(), name, type, sets, image });
